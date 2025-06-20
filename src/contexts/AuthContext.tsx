@@ -14,6 +14,10 @@ interface UserProfile {
   latitude?: number
   longitude?: number
   is_online?: boolean
+  shop_name?: string
+  shop_category?: string
+  shop_address?: string
+  vehicle_type?: string
 }
 
 interface AuthContextType {
@@ -45,21 +49,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth event:', event, session?.user?.id)
         setUser(session?.user ?? null)
         
-        if (session?.user) {
-          // Fetch user profile
-          try {
-            const { data: profileData } = await supabase
-              .from('user_profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single()
-            
-            setProfile(profileData)
-          } catch (error) {
-            console.error('Error fetching profile:', error)
-          }
+        if (session?.user && event === 'SIGNED_IN') {
+          // Fetch or create user profile
+          await fetchOrCreateProfile(session.user)
         } else {
           setProfile(null)
         }
@@ -72,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
-        // Profile will be fetched by the auth state change handler
+        fetchOrCreateProfile(session.user)
       } else {
         setLoading(false)
       }
@@ -80,6 +75,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe()
   }, [])
+
+  const fetchOrCreateProfile = async (user: User) => {
+    try {
+      // Try to fetch existing profile
+      let { data: profileData, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      
+      if (error && error.code === 'PGRST116') {
+        // Profile doesn't exist, create it from user metadata
+        console.log('Creating profile for user:', user.id)
+        const metadata = user.user_metadata || {}
+        
+        const newProfile = {
+          id: user.id,
+          email: user.email!,
+          full_name: metadata.full_name || metadata.name || '',
+          phone: metadata.phone || '',
+          role: metadata.role || 'customer',
+          shop_name: metadata.shop_name || null,
+          shop_category: metadata.shop_category || null,
+          shop_address: metadata.shop_address || null,
+          vehicle_type: metadata.vehicle_type || null
+        }
+
+        const { data: insertedProfile, error: insertError } = await supabase
+          .from('user_profiles')
+          .insert([newProfile])
+          .select()
+          .single()
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError)
+        } else {
+          profileData = insertedProfile
+        }
+      }
+      
+      setProfile(profileData)
+    } catch (error) {
+      console.error('Error fetching/creating profile:', error)
+    }
+  }
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -94,11 +134,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/auth/login`,
         data: {
           full_name: userData.name,
           role: userData.role,
           phone: userData.phone,
+          ...(userData.role === 'shop_owner' && {
+            shop_name: userData.shop_name,
+            shop_category: userData.shop_category,
+            shop_address: userData.shop_address,
+          }),
+          ...(userData.role === 'delivery_partner' && {
+            vehicle_type: userData.vehicle_type,
+          }),
         }
       }
     })
