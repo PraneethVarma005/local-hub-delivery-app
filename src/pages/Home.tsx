@@ -2,163 +2,149 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { MapPin } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MapPin, ShoppingCart, Truck, Store } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 const Home = () => {
+  const { user, userRole } = useAuth()
+
+  const getDashboardLink = () => {
+    switch (userRole) {
+      case 'customer':
+        return '/customer/dashboard'
+      case 'shop_owner':
+        return '/shop/dashboard'
+      case 'delivery_partner':
+        return '/delivery/dashboard'
+      default:
+        return '/auth/login'
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-[#F7F9F9]">
+    <div className="min-h-screen bg-gradient-to-br from-[#F7F9F9] to-[#E8F4F8]">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-[#2C3E50] to-[#16A085] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-6xl font-bold mb-6">
-              LocalHub Delivery
-            </h1>
-            <p className="text-xl sm:text-2xl mb-8 text-gray-200">
-              Connect with nearby local shops for instant delivery
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-[#2C3E50] mb-6">
+            Welcome to LocalHub
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Your neighborhood marketplace. Discover local shops, order from nearby stores, 
+            and get everything delivered to your doorstep.
+          </p>
+          
+          {user ? (
+            <Link to={getDashboardLink()}>
+              <Button size="lg" className="bg-[#16A085] hover:bg-[#16A085]/90 text-lg px-8 py-3">
+                Go to Dashboard
+              </Button>
+            </Link>
+          ) : (
+            <div className="flex gap-4 justify-center">
               <Link to="/auth/register">
-                <Button className="bg-[#F39C12] hover:bg-[#F39C12]/90 text-black px-8 py-3 text-lg">
-                  Order Now
+                <Button size="lg" className="bg-[#16A085] hover:bg-[#16A085]/90 text-lg px-8 py-3">
+                  Get Started
                 </Button>
               </Link>
-              <Link to="/auth/register">
-                <Button 
-                  variant="outline" 
-                  className="border-white text-white hover:bg-white hover:text-[#2C3E50] px-8 py-3 text-lg"
-                >
-                  Join as Partner
+              <Link to="/auth/login">
+                <Button size="lg" variant="outline" className="text-lg px-8 py-3">
+                  Sign In
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <Card className="text-center hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="mx-auto w-16 h-16 bg-[#16A085]/10 rounded-full flex items-center justify-center mb-4">
+                <ShoppingCart className="w-8 h-8 text-[#16A085]" />
+              </div>
+              <CardTitle className="text-[#2C3E50]">Shop Local</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Browse and order from your favorite local shops and restaurants. 
+                Support your neighborhood businesses.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="mx-auto w-16 h-16 bg-[#16A085]/10 rounded-full flex items-center justify-center mb-4">
+                <Truck className="w-8 h-8 text-[#16A085]" />
+              </div>
+              <CardTitle className="text-[#2C3E50]">Fast Delivery</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Get your orders delivered quickly by our network of local delivery partners. 
+                Track your order in real-time.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="mx-auto w-16 h-16 bg-[#16A085]/10 rounded-full flex items-center justify-center mb-4">
+                <Store className="w-8 h-8 text-[#16A085]" />
+              </div>
+              <CardTitle className="text-[#2C3E50]">Easy Management</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Shop owners can easily manage inventory, track orders, and grow their business 
+                with our comprehensive dashboard.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* CTA Section */}
+        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+          <h2 className="text-3xl font-bold text-[#2C3E50] mb-4">
+            Ready to join LocalHub?
+          </h2>
+          <p className="text-gray-600 mb-8 text-lg">
+            Whether you're a customer, shop owner, or delivery partner, we have something for you.
+          </p>
+          
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="p-6 border border-gray-200 rounded-lg">
+              <h3 className="font-semibold text-[#2C3E50] mb-2">For Customers</h3>
+              <p className="text-gray-600 text-sm mb-4">Order from local shops with easy delivery</p>
+              <Link to="/auth/register?role=customer">
+                <Button className="w-full bg-[#16A085] hover:bg-[#16A085]/90">
+                  Sign Up as Customer
+                </Button>
+              </Link>
+            </div>
+
+            <div className="p-6 border border-gray-200 rounded-lg">
+              <h3 className="font-semibold text-[#2C3E50] mb-2">For Shop Owners</h3>
+              <p className="text-gray-600 text-sm mb-4">List your shop and manage orders online</p>
+              <Link to="/auth/register?role=shop_owner">
+                <Button className="w-full bg-[#16A085] hover:bg-[#16A085]/90">
+                  Sign Up as Shop Owner
+                </Button>
+              </Link>
+            </div>
+
+            <div className="p-6 border border-gray-200 rounded-lg">
+              <h3 className="font-semibold text-[#2C3E50] mb-2">For Delivery Partners</h3>
+              <p className="text-gray-600 text-sm mb-4">Earn money by delivering orders</p>
+              <Link to="/auth/register?role=delivery_partner">
+                <Button className="w-full bg-[#16A085] hover:bg-[#16A085]/90">
+                  Sign Up as Delivery Partner
                 </Button>
               </Link>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Features Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-[#2C3E50] mb-4">
-            How LocalHub Works
-          </h2>
-          <p className="text-gray-600 text-lg">
-            Simple, fast, and reliable local delivery
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="w-16 h-16 bg-[#16A085] rounded-full flex items-center justify-center mx-auto mb-4">
-                <MapPin className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-[#2C3E50] mb-2">
-                Find Nearby Shops
-              </h3>
-              <p className="text-gray-600">
-                Discover local food, grocery, and medicine shops within 5-10km radius
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="w-16 h-16 bg-[#F39C12] rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🛒</span>
-              </div>
-              <h3 className="text-xl font-semibold text-[#2C3E50] mb-2">
-                Order & Pay
-              </h3>
-              <p className="text-gray-600">
-                Browse products, add to cart, and pay online or cash on delivery
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="w-16 h-16 bg-[#2C3E50] rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🚴</span>
-              </div>
-              <h3 className="text-xl font-semibold text-[#2C3E50] mb-2">
-                Fast Delivery
-              </h3>
-              <p className="text-gray-600">
-                Track your order in real-time and get it delivered to your doorstep
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Categories Section */}
-      <div className="bg-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-[#2C3E50] mb-4">
-              Shop by Category
-            </h2>
-            <p className="text-gray-600 text-lg">
-              Everything you need from local shops
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="group cursor-pointer hover:shadow-xl transition-all">
-              <CardContent className="p-8 text-center">
-                <div className="text-6xl mb-4">🍕</div>
-                <h3 className="text-2xl font-semibold text-[#2C3E50] mb-2">
-                  Food
-                </h3>
-                <p className="text-gray-600">
-                  Restaurants, cafes, and local food vendors
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="group cursor-pointer hover:shadow-xl transition-all">
-              <CardContent className="p-8 text-center">
-                <div className="text-6xl mb-4">🥬</div>
-                <h3 className="text-2xl font-semibold text-[#2C3E50] mb-2">
-                  Grocery
-                </h3>
-                <p className="text-gray-600">
-                  Fresh vegetables, fruits, and daily essentials
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="group cursor-pointer hover:shadow-xl transition-all">
-              <CardContent className="p-8 text-center">
-                <div className="text-6xl mb-4">💊</div>
-                <h3 className="text-2xl font-semibold text-[#2C3E50] mb-2">
-                  Medicine
-                </h3>
-                <p className="text-gray-600">
-                  Pharmacies and medical stores near you
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className="bg-[#2C3E50] text-white py-16">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold mb-4">
-            Ready to get started?
-          </h2>
-          <p className="text-xl text-gray-300 mb-8">
-            Join thousands of customers enjoying fast local delivery
-          </p>
-          <Link to="/auth/register">
-            <Button className="bg-[#16A085] hover:bg-[#16A085]/90 px-8 py-3 text-lg">
-              Start Ordering Now
-            </Button>
-          </Link>
         </div>
       </div>
     </div>
