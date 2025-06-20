@@ -49,13 +49,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           // Fetch user profile
-          const { data: profileData } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-          
-          setProfile(profileData)
+          try {
+            const { data: profileData } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+            
+            setProfile(profileData)
+          } catch (error) {
+            console.error('Error fetching profile:', error)
+          }
         } else {
           setProfile(null)
         }
@@ -68,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
-        // Fetch profile will be handled by the auth state change
+        // Profile will be fetched by the auth state change handler
       } else {
         setLoading(false)
       }
@@ -95,10 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           full_name: userData.name,
           role: userData.role,
           phone: userData.phone,
-          shop_name: userData.shopName,
-          shop_category: userData.shopCategory,
-          shop_address: userData.shopAddress,
-          vehicle_type: userData.vehicleType,
         }
       }
     })

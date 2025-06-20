@@ -1,415 +1,287 @@
 
-import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import React, { useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { MapPin, Star, Phone, Clock, Plus, Minus, ShoppingCart } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { ArrowLeft, Plus, Minus, ShoppingCart, MapPin, Clock, Star } from 'lucide-react'
 
-interface Product {
-  id: string
-  name: string
-  description: string
-  image_url: string
-  price: number
-  category: string
-  is_available: boolean
-  stock_quantity: number
+// Mock data for products
+const mockShop = {
+  id: '1',
+  name: 'Fresh Mart Grocery',
+  category: 'grocery',
+  address: '123 Main Street, Delhi',
+  phone: '+91 9876543210',
+  is_open: true,
+  rating: 4.5,
+  total_reviews: 128,
+  delivery_fee: 25,
+  minimum_order_amount: 200,
+  opening_time: '08:00',
+  closing_time: '22:00'
 }
 
-interface Shop {
-  id: string
-  name: string
-  description: string
-  category: string
-  image_url: string
-  address: string
-  phone: string
-  is_open: boolean
-  opening_time: string
-  closing_time: string
-  minimum_order_amount: number
-  delivery_fee: number
-  rating: number
-  total_reviews: number
-}
-
-interface CartItem {
-  product_id: string
-  quantity: number
-}
+const mockProducts = [
+  {
+    id: '1',
+    name: 'Fresh Apples',
+    description: 'Red delicious apples, 1kg pack',
+    price: 150,
+    category: 'Fruits',
+    is_available: true,
+    stock_quantity: 50,
+    image_url: '/placeholder.svg'
+  },
+  {
+    id: '2',
+    name: 'Basmati Rice',
+    description: 'Premium quality basmati rice, 5kg',
+    price: 600,
+    category: 'Grains',
+    is_available: true,
+    stock_quantity: 25,
+    image_url: '/placeholder.svg'
+  },
+  {
+    id: '3',
+    name: 'Fresh Milk',
+    description: 'Full cream milk, 1 liter',
+    price: 60,
+    category: 'Dairy',
+    is_available: false,
+    stock_quantity: 0,
+    image_url: '/placeholder.svg'
+  }
+]
 
 const ShopDetail = () => {
   const { shopId } = useParams()
-  const navigate = useNavigate()
-  const { user } = useAuth()
   const { toast } = useToast()
-  
-  const [shop, setShop] = useState<Shop | null>(null)
-  const [products, setProducts] = useState<Product[]>([])
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [cart, setCart] = useState<Record<string, number>>({})
 
-  useEffect(() => {
-    if (shopId) {
-      fetchShopDetails()
-      fetchProducts()
-      fetchCartItems()
-    }
-  }, [shopId])
-
-  const fetchShopDetails = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('shops')
-        .select('*')
-        .eq('id', shopId)
-        .single()
-
-      if (error) throw error
-      setShop(data)
-    } catch (error) {
-      console.error('Error fetching shop:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load shop details',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const fetchProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('shop_id', shopId)
-        .eq('is_available', true)
-        .order('category', { ascending: true })
-
-      if (error) throw error
-      setProducts(data || [])
-    } catch (error) {
-      console.error('Error fetching products:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchCartItems = async () => {
-    if (!user) return
-
-    try {
-      const { data, error } = await supabase
-        .from('cart_items')
-        .select('product_id, quantity')
-        .eq('customer_id', user.id)
-
-      if (error) throw error
-      setCart(data || [])
-    } catch (error) {
-      console.error('Error fetching cart:', error)
-    }
-  }
-
-  const getProductQuantityInCart = (productId: string) => {
-    const cartItem = cart.find(item => item.product_id === productId)
-    return cartItem ? cartItem.quantity : 0
-  }
-
-  const updateCartItem = async (productId: string, newQuantity: number) => {
-    if (!user) {
-      toast({
-        title: 'Please login',
-        description: 'You need to login to add items to cart',
-        variant: 'destructive'
-      })
-      return
-    }
-
-    try {
-      if (newQuantity === 0) {
-        // Remove from cart
-        await supabase
-          .from('cart_items')
-          .delete()
-          .eq('customer_id', user.id)
-          .eq('product_id', productId)
-        
-        setCart(cart.filter(item => item.product_id !== productId))
-      } else {
-        // Check if item already exists in cart
-        const existingItem = cart.find(item => item.product_id === productId)
-        
-        if (existingItem) {
-          // Update quantity
-          await supabase
-            .from('cart_items')
-            .update({ quantity: newQuantity })
-            .eq('customer_id', user.id)
-            .eq('product_id', productId)
-          
-          setCart(cart.map(item => 
-            item.product_id === productId 
-              ? { ...item, quantity: newQuantity }
-              : item
-          ))
-        } else {
-          // Add new item
-          await supabase
-            .from('cart_items')
-            .insert({
-              customer_id: user.id,
-              product_id: productId,
-              quantity: newQuantity
-            })
-          
-          setCart([...cart, { product_id: productId, quantity: newQuantity }])
-        }
+  const updateCartQuantity = (productId: string, change: number) => {
+    setCart(prev => {
+      const currentQty = prev[productId] || 0
+      const newQty = Math.max(0, currentQty + change)
+      
+      if (newQty === 0) {
+        const { [productId]: removed, ...rest } = prev
+        return rest
       }
-
-      toast({
-        title: 'Cart updated',
-        description: newQuantity === 0 ? 'Item removed from cart' : 'Item added to cart'
-      })
-    } catch (error) {
-      console.error('Error updating cart:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update cart',
-        variant: 'destructive'
-      })
-    }
+      
+      return { ...prev, [productId]: newQty }
+    })
   }
 
-  const getTotalCartValue = () => {
-    return cart.reduce((total, cartItem) => {
-      const product = products.find(p => p.id === cartItem.product_id)
-      return total + (product ? product.price * cartItem.quantity : 0)
-    }, 0)
+  const addToCart = (productId: string) => {
+    updateCartQuantity(productId, 1)
+    toast({
+      title: "Added to cart",
+      description: "Item has been added to your cart",
+    })
   }
 
   const getTotalItems = () => {
-    return cart.reduce((total, item) => total + item.quantity, 0)
+    return Object.values(cart).reduce((sum, qty) => sum + qty, 0)
   }
 
-  const handleCheckout = () => {
-    if (cart.length === 0) {
-      toast({
-        title: 'Cart is empty',
-        description: 'Please add items to cart before checkout',
-        variant: 'destructive'
-      })
-      return
-    }
-
-    const totalValue = getTotalCartValue()
-    if (shop && totalValue < shop.minimum_order_amount) {
-      toast({
-        title: 'Minimum order not met',
-        description: `Minimum order amount is ₹${shop.minimum_order_amount}`,
-        variant: 'destructive'
-      })
-      return
-    }
-
-    navigate('/customer/checkout', { state: { shopId, cart, shop } })
+  const getTotalAmount = () => {
+    return Object.entries(cart).reduce((total, [productId, qty]) => {
+      const product = mockProducts.find(p => p.id === productId)
+      return total + (product ? product.price * qty : 0)
+    }, 0)
   }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
-        <div className="text-gray-500">Loading shop details...</div>
-      </div>
-    )
-  }
-
-  if (!shop) {
-    return (
-      <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500 mb-4">Shop not found</p>
-          <Button onClick={() => navigate('/customer/shops')}>
-            Back to Shops
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  const groupedProducts = products.reduce((acc, product) => {
-    const category = product.category || 'Other'
-    if (!acc[category]) acc[category] = []
-    acc[category].push(product)
-    return acc
-  }, {} as Record<string, Product[]>)
 
   return (
-    <div className="min-h-screen bg-[#F7F9F9]">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/customer/shops')}
-            className="mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Shops
-          </Button>
-
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-4 mb-4">
-                <h1 className="text-3xl font-bold text-[#2C3E50]">{shop.name}</h1>
-                <Badge 
-                  variant={shop.is_open ? "default" : "secondary"}
-                  className={shop.is_open ? "bg-[#16A085]" : ""}
-                >
-                  {shop.is_open ? 'Open' : 'Closed'}
-                </Badge>
-              </div>
-
-              {shop.description && (
-                <p className="text-gray-600 mb-4">{shop.description}</p>
-              )}
-
-              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                <div className="flex items-center">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  {shop.address}
-                </div>
-                
-                {shop.opening_time && shop.closing_time && (
-                  <div className="flex items-center">
-                    <Clock className="w-4 h-4 mr-2" />
-                    {shop.opening_time} - {shop.closing_time}
+    <div className="min-h-screen bg-[#F7F9F9] p-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Shop Header */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-2xl text-[#2C3E50] mb-2">
+                  {mockShop.name}
+                </CardTitle>
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <span>{mockShop.rating}</span>
+                    <span className="text-gray-500">({mockShop.total_reviews} reviews)</span>
                   </div>
-                )}
-                
-                <div className="flex items-center">
-                  <Star className="w-4 h-4 mr-1 text-yellow-400 fill-current" />
-                  {shop.rating.toFixed(1)} ({shop.total_reviews} reviews)
+                  <Badge variant={mockShop.is_open ? "default" : "secondary"}>
+                    {mockShop.is_open ? "Open" : "Closed"}
+                  </Badge>
                 </div>
-              </div>
-
-              <div className="mt-4 text-sm text-gray-600">
-                Minimum order: ₹{shop.minimum_order_amount}
-                {shop.delivery_fee > 0 && ` • Delivery fee: ₹${shop.delivery_fee}`}
               </div>
             </div>
-
-            {/* Cart Summary */}
-            {cart.length > 0 && (
-              <div className="md:w-80">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-[#2C3E50]">
-                      <ShoppingCart className="w-5 h-5 mr-2" />
-                      Cart ({getTotalItems()} items)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span>₹{getTotalCartValue().toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Delivery fee:</span>
-                        <span>₹{shop.delivery_fee.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg border-t pt-2">
-                        <span>Total:</span>
-                        <span>₹{(getTotalCartValue() + shop.delivery_fee).toFixed(2)}</span>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={handleCheckout}
-                      className="w-full bg-[#16A085] hover:bg-[#16A085]/90"
-                    >
-                      Proceed to Checkout
-                    </Button>
-                  </CardContent>
-                </Card>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm">{mockShop.address}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm">{mockShop.phone}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm">
+                    {mockShop.opening_time} - {mockShop.closing_time}
+                  </span>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-      </div>
+              <div className="space-y-2 text-sm">
+                <div>Delivery Fee: ₹{mockShop.delivery_fee}</div>
+                <div>Minimum Order: ₹{mockShop.minimum_order_amount}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Products */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {Object.entries(groupedProducts).map(([category, categoryProducts]) => (
-          <div key={category} className="mb-8">
-            <h2 className="text-xl font-semibold text-[#2C3E50] mb-4">{category}</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categoryProducts.map((product) => {
-                const quantityInCart = getProductQuantityInCart(product.id)
-                
-                return (
-                  <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-[#2C3E50] mb-1">{product.name}</h3>
-                          {product.description && (
-                            <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                          )}
-                          <p className="text-lg font-bold text-[#16A085]">₹{product.price}</p>
-                          {product.stock_quantity <= 5 && (
-                            <p className="text-xs text-orange-500">Only {product.stock_quantity} left</p>
+        {/* Products */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <h2 className="text-xl font-semibold text-[#2C3E50] mb-4">Products</h2>
+            <div className="space-y-4">
+              {mockProducts.map((product) => (
+                <Card key={product.id}>
+                  <CardContent className="p-4">
+                    <div className="flex gap-4">
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="w-20 h-20 object-cover rounded-lg bg-gray-100"
+                      />
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-medium text-[#2C3E50]">{product.name}</h3>
+                            <p className="text-sm text-gray-600">{product.description}</p>
+                            <Badge variant="outline" className="mt-1">
+                              {product.category}
+                            </Badge>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-semibold text-[#16A085]">
+                              ₹{product.price}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Stock: {product.stock_quantity}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {cart[product.id] ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateCartQuantity(product.id, -1)}
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </Button>
+                                <span className="px-3 py-1 bg-gray-100 rounded">
+                                  {cart[product.id]}
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateCartQuantity(product.id, 1)}
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => addToCart(product.id)}
+                                disabled={!product.is_available}
+                                className="bg-[#16A085] hover:bg-[#16A085]/90"
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                Add to Cart
+                              </Button>
+                            )}
+                          </div>
+                          {!product.is_available && (
+                            <Badge variant="secondary">Out of Stock</Badge>
                           )}
                         </div>
                       </div>
-
-                      <div className="flex items-center justify-between">
-                        {quantityInCart === 0 ? (
-                          <Button
-                            onClick={() => updateCartItem(product.id, 1)}
-                            disabled={!shop.is_open || product.stock_quantity === 0}
-                            className="bg-[#16A085] hover:bg-[#16A085]/90"
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add to Cart
-                          </Button>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateCartItem(product.id, quantityInCart - 1)}
-                            >
-                              <Minus className="w-4 h-4" />
-                            </Button>
-                            <span className="font-medium px-3">{quantityInCart}</span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateCartItem(product.id, quantityInCart + 1)}
-                              disabled={quantityInCart >= product.stock_quantity}
-                            >
-                              <Plus className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
-        ))}
 
-        {products.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No products available at this shop.</p>
+          {/* Cart Summary */}
+          <div>
+            <Card className="sticky top-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5" />
+                  Cart ({getTotalItems()} items)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {Object.keys(cart).length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">Your cart is empty</p>
+                ) : (
+                  <div className="space-y-3">
+                    {Object.entries(cart).map(([productId, qty]) => {
+                      const product = mockProducts.find(p => p.id === productId)
+                      if (!product) return null
+                      
+                      return (
+                        <div key={productId} className="flex justify-between items-center">
+                          <div>
+                            <div className="font-medium text-sm">{product.name}</div>
+                            <div className="text-xs text-gray-500">
+                              ₹{product.price} × {qty}
+                            </div>
+                          </div>
+                          <div className="font-medium">
+                            ₹{product.price * qty}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    
+                    <hr />
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>₹{getTotalAmount()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Delivery Fee:</span>
+                        <span>₹{mockShop.delivery_fee}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold">
+                        <span>Total:</span>
+                        <span>₹{getTotalAmount() + mockShop.delivery_fee}</span>
+                      </div>
+                    </div>
+                    
+                    <Button className="w-full bg-[#16A085] hover:bg-[#16A085]/90 mt-4">
+                      Proceed to Checkout
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

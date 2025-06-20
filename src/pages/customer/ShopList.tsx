@@ -1,228 +1,185 @@
 
-import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { MapPin, Star, Clock, Phone } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import GoogleMap from '@/components/GoogleMap'
-import { supabase } from '@/lib/supabase'
-import { useLocation } from '@/contexts/LocationContext'
-import { MapPin, Clock, Star } from 'lucide-react'
 
-interface Shop {
-  id: string
-  name: string
-  description: string
-  category: string
-  image_url: string
-  address: string
-  latitude: number
-  longitude: number
-  phone: string
-  is_open: boolean
-  opening_time: string
-  closing_time: string
-  delivery_radius_km: number
-  minimum_order_amount: number
-  delivery_fee: number
-  rating: number
-  total_reviews: number
-}
+// Mock data for initial display
+const mockShops = [
+  {
+    id: '1',
+    name: 'Fresh Mart Grocery',
+    category: 'grocery',
+    address: '123 Main Street, Delhi',
+    latitude: 28.6139,
+    longitude: 77.2090,
+    phone: '+91 9876543210',
+    is_open: true,
+    rating: 4.5,
+    total_reviews: 128,
+    delivery_fee: 25,
+    minimum_order_amount: 200,
+    image_url: '/placeholder.svg'
+  },
+  {
+    id: '2',
+    name: 'Spice Kitchen',
+    category: 'food',
+    address: '456 Food Street, Delhi',
+    latitude: 28.6129,
+    longitude: 77.2095,
+    phone: '+91 9876543211',
+    is_open: true,
+    rating: 4.2,
+    total_reviews: 89,
+    delivery_fee: 30,
+    minimum_order_amount: 150,
+    image_url: '/placeholder.svg'
+  },
+  {
+    id: '3',
+    name: 'HealthCare Pharmacy',
+    category: 'medicine',
+    address: '789 Health Avenue, Delhi',
+    latitude: 28.6149,
+    longitude: 77.2085,
+    phone: '+91 9876543212',
+    is_open: false,
+    rating: 4.8,
+    total_reviews: 256,
+    delivery_fee: 20,
+    minimum_order_amount: 100,
+    image_url: '/placeholder.svg'
+  }
+]
 
 const ShopList = () => {
-  const [shops, setShops] = useState<Shop[]>([])
-  const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [selectedShop, setSelectedShop] = useState<Shop | null>(null)
-  const { location } = useLocation()
-  const navigate = useNavigate()
 
   const categories = [
-    { value: 'all', label: 'All Shops' },
-    { value: 'food', label: 'Food' },
-    { value: 'grocery', label: 'Grocery' },
-    { value: 'medicine', label: 'Medicine' },
-    { value: 'pharmacy', label: 'Pharmacy' },
-    { value: 'electronics', label: 'Electronics' },
-    { value: 'clothing', label: 'Clothing' },
-    { value: 'books', label: 'Books' },
-    { value: 'other', label: 'Other' }
+    { id: 'all', name: 'All Shops' },
+    { id: 'food', name: 'Food & Restaurants' },
+    { id: 'grocery', name: 'Grocery' },
+    { id: 'medicine', name: 'Medicine' },
+    { id: 'pharmacy', name: 'Pharmacy' }
   ]
 
-  useEffect(() => {
-    fetchShops()
-  }, [selectedCategory])
+  const filteredShops = selectedCategory === 'all' 
+    ? mockShops 
+    : mockShops.filter(shop => shop.category === selectedCategory)
 
-  const fetchShops = async () => {
-    setLoading(true)
-    try {
-      let query = supabase
-        .from('shops')
-        .select('*')
-        .eq('is_open', true)
-
-      if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      setShops(data || [])
-    } catch (error) {
-      console.error('Error fetching shops:', error)
-    } finally {
-      setLoading(false)
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'food': return 'bg-orange-500'
+      case 'grocery': return 'bg-green-500'
+      case 'medicine': return 'bg-blue-500'
+      case 'pharmacy': return 'bg-purple-500'
+      default: return 'bg-gray-500'
     }
-  }
-
-  const calculateDistance = (shopLat: number, shopLng: number) => {
-    if (!location) return null
-    
-    const R = 6371 // Earth's radius in km
-    const dLat = (shopLat - location.lat) * Math.PI / 180
-    const dLon = (shopLng - location.lng) * Math.PI / 180
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(location.lat * Math.PI / 180) * Math.cos(shopLat * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-    return R * c
-  }
-
-  const handleShopSelect = (shop: Shop) => {
-    setSelectedShop(shop)
-    navigate(`/customer/shop/${shop.id}`)
   }
 
   return (
     <div className="min-h-screen bg-[#F7F9F9] p-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#2C3E50] mb-4">Local Shops</h1>
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-[#2C3E50] mb-4">Browse Shops</h1>
           
-          {/* Category Filter */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            {categories.map((category) => (
-              <Button
-                key={category.value}
-                variant={selectedCategory === category.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category.value)}
-                className={selectedCategory === category.value ? "bg-[#16A085] hover:bg-[#16A085]/90" : ""}
-              >
-                {category.label}
-              </Button>
-            ))}
-          </div>
-        </div>
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'list' | 'map')}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="list">List View</TabsTrigger>
+              <TabsTrigger value="map">Map View</TabsTrigger>
+            </TabsList>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Map */}
-          <div className="order-2 lg:order-1">
-            <GoogleMap
-              showShops={true}
-              shops={shops.map(shop => ({
-                id: shop.id,
-                name: shop.name,
-                latitude: shop.latitude,
-                longitude: shop.longitude,
-                category: shop.category,
-                address: shop.address,
-                is_open: shop.is_open
-              }))}
-              height="600px"
-              userLocation={location}
-              onShopSelect={(shop) => {
-                const fullShop = shops.find(s => s.id === shop.id)
-                if (fullShop) setSelectedShop(fullShop)
-              }}
-            />
-          </div>
+            {/* Category Filter */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {categories.map(category => (
+                <Button
+                  key={category.id}
+                  variant={selectedCategory === category.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={selectedCategory === category.id ? "bg-[#16A085] hover:bg-[#16A085]/90" : ""}
+                >
+                  {category.name}
+                </Button>
+              ))}
+            </div>
 
-          {/* Shops List */}
-          <div className="order-1 lg:order-2">
-            {loading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="text-gray-500">Loading shops...</div>
-              </div>
-            ) : shops.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No shops found in this category.</p>
-              </div>
-            ) : (
-              <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                {shops.map((shop) => {
-                  const distance = calculateDistance(shop.latitude, shop.longitude)
-                  
-                  return (
-                    <Card 
-                      key={shop.id} 
-                      className={`cursor-pointer transition-shadow hover:shadow-lg ${
-                        selectedShop?.id === shop.id ? 'ring-2 ring-[#16A085]' : ''
-                      }`}
-                      onClick={() => handleShopSelect(shop)}
-                    >
+            <TabsContent value="list" className="space-y-4">
+              {filteredShops.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">No shops found in this category</p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredShops.map((shop) => (
+                    <Card key={shop.id} className="hover:shadow-lg transition-shadow">
                       <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg text-[#2C3E50]">{shop.name}</CardTitle>
-                            {shop.description && (
-                              <p className="text-sm text-gray-600 mt-1">{shop.description}</p>
-                            )}
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge className={getCategoryColor(shop.category)}>
+                              {shop.category}
+                            </Badge>
+                            <Badge variant={shop.is_open ? "default" : "secondary"}>
+                              {shop.is_open ? "Open" : "Closed"}
+                            </Badge>
                           </div>
-                          <Badge 
-                            variant={shop.is_open ? "default" : "secondary"}
-                            className={shop.is_open ? "bg-[#16A085]" : ""}
-                          >
-                            {shop.is_open ? 'Open' : 'Closed'}
-                          </Badge>
+                        </div>
+                        <CardTitle className="text-[#2C3E50]">{shop.name}</CardTitle>
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <span>{shop.rating}</span>
+                          <span>({shop.total_reviews} reviews)</span>
                         </div>
                       </CardHeader>
-                      
-                      <CardContent className="pt-0">
-                        <div className="space-y-2">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <MapPin className="w-4 h-4 mr-2" />
-                            {shop.address}
-                            {distance && (
-                              <span className="ml-2 text-[#16A085] font-medium">
-                                ({distance.toFixed(1)} km away)
-                              </span>
-                            )}
+
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="w-4 h-4 mt-0.5 text-gray-500" />
+                            <span className="text-sm text-gray-600">{shop.address}</span>
                           </div>
-                          
-                          {shop.opening_time && shop.closing_time && (
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Clock className="w-4 h-4 mr-2" />
-                              {shop.opening_time} - {shop.closing_time}
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center text-sm">
-                              <Star className="w-4 h-4 mr-1 text-yellow-400 fill-current" />
-                              <span>{shop.rating.toFixed(1)}</span>
-                              <span className="text-gray-500 ml-1">({shop.total_reviews} reviews)</span>
-                            </div>
-                            
-                            <div className="text-sm text-gray-600">
-                              Min order: ₹{shop.minimum_order_amount}
-                              {shop.delivery_fee > 0 && ` • Delivery: ₹${shop.delivery_fee}`}
-                            </div>
+
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm text-gray-600">{shop.phone}</span>
                           </div>
-                          
-                          <Badge variant="outline" className="text-xs">
-                            {shop.category}
-                          </Badge>
+
+                          <div className="flex justify-between text-sm">
+                            <span>Delivery: ₹{shop.delivery_fee}</span>
+                            <span>Min order: ₹{shop.minimum_order_amount}</span>
+                          </div>
+
+                          <Link to={`/customer/shop/${shop.id}`}>
+                            <Button 
+                              className="w-full bg-[#16A085] hover:bg-[#16A085]/90"
+                              disabled={!shop.is_open}
+                            >
+                              {shop.is_open ? 'View Shop' : 'Currently Closed'}
+                            </Button>
+                          </Link>
                         </div>
                       </CardContent>
                     </Card>
-                  )
-                })}
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="map">
+              <div className="bg-white rounded-lg p-4">
+                <GoogleMap
+                  shops={filteredShops}
+                  height="500px"
+                />
               </div>
-            )}
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
