@@ -110,13 +110,7 @@ const ShopDetail = () => {
             {/* Map */}
             <div className="mt-4">
               <GoogleMap
-                shops={[{
-                  id: shop.id,
-                  name: shop.name,
-                  lat: shop.lat,
-                  lng: shop.lng,
-                  category: shop.category
-                }]}
+                shops={[shop]}
                 height="300px"
                 showShops={true}
                 center={{ lat: shop.lat, lng: shop.lng }}

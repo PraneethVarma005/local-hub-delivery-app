@@ -7,12 +7,15 @@ interface GoogleMapProps {
   shops?: Array<{
     id: string
     name: string
-    latitude: number
-    longitude: number
-    address: string
+    lat: number
+    lng: number
+    category?: string
   }>
   height?: string
   showLocationPicker?: boolean
+  showShops?: boolean
+  center?: { lat: number; lng: number }
+  zoom?: number
 }
 
 const GoogleMap: React.FC<GoogleMapProps> = ({
@@ -20,7 +23,10 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   selectedLocation,
   shops = [],
   height = '400px',
-  showLocationPicker = false
+  showLocationPicker = false,
+  showShops = false,
+  center,
+  zoom = 13
 }) => {
   const mapRef = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
@@ -43,29 +49,33 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   const initializeMap = () => {
     if (!mapRef.current) return
 
-    // Get user's current location
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userPos = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
+    // Use provided center or get user's current location
+    if (center) {
+      createMap(center)
+    } else {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userPos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+          setUserLocation(userPos)
+          createMap(userPos)
+        },
+        () => {
+          // Default to Delhi if geolocation fails
+          const defaultPos = { lat: 28.6139, lng: 77.2090 }
+          setUserLocation(defaultPos)
+          createMap(defaultPos)
         }
-        setUserLocation(userPos)
-        createMap(userPos)
-      },
-      () => {
-        // Default to a central location if geolocation fails
-        const defaultPos = { lat: 28.6139, lng: 77.2090 } // Delhi
-        setUserLocation(defaultPos)
-        createMap(defaultPos)
-      }
-    )
+      )
+    }
   }
 
-  const createMap = (center: { lat: number; lng: number }) => {
+  const createMap = (mapCenter: { lat: number; lng: number }) => {
     const mapInstance = new google.maps.Map(mapRef.current!, {
-      center,
-      zoom: 13,
+      center: mapCenter,
+      zoom: zoom,
       styles: [
         {
           featureType: 'poi',
@@ -77,52 +87,56 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
     setMap(mapInstance)
 
-    // Add user location marker
-    new google.maps.Marker({
-      position: center,
-      map: mapInstance,
-      title: 'Your Location',
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <circle cx="12" cy="12" r="4"/>
-          </svg>
-        `),
-        scaledSize: new google.maps.Size(30, 30)
-      }
-    })
-
-    // Add shop markers
-    shops.forEach(shop => {
-      const marker = new google.maps.Marker({
-        position: { lat: shop.latitude, lng: shop.longitude },
+    // Add user location marker only if we have user location and no custom center
+    if (!center && userLocation) {
+      new google.maps.Marker({
+        position: userLocation,
         map: mapInstance,
-        title: shop.name,
+        title: 'Your Location',
         icon: {
           url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16A085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9,22 9,12 15,12 15,22"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="4"/>
             </svg>
           `),
-          scaledSize: new google.maps.Size(35, 35)
+          scaledSize: new google.maps.Size(30, 30)
         }
       })
+    }
 
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div>
-            <h3 style="margin: 0 0 5px 0; color: #2C3E50;">${shop.name}</h3>
-            <p style="margin: 0; color: #666; font-size: 12px;">${shop.address}</p>
-          </div>
-        `
-      })
+    // Add shop markers
+    if (showShops && shops.length > 0) {
+      shops.forEach(shop => {
+        const marker = new google.maps.Marker({
+          position: { lat: shop.lat, lng: shop.lng },
+          map: mapInstance,
+          title: shop.name,
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16A085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9,22 9,12 15,12 15,22"/>
+              </svg>
+            `),
+            scaledSize: new google.maps.Size(35, 35)
+          }
+        })
 
-      marker.addListener('click', () => {
-        infoWindow.open(mapInstance, marker)
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div>
+              <h3 style="margin: 0 0 5px 0; color: #2C3E50;">${shop.name}</h3>
+              <p style="margin: 0; color: #666; font-size: 12px; text-transform: capitalize;">${shop.category || 'Shop'}</p>
+            </div>
+          `
+        })
+
+        marker.addListener('click', () => {
+          infoWindow.open(mapInstance, marker)
+        })
       })
-    })
+    }
 
     // Add click listener for location selection
     if (showLocationPicker && onLocationSelect) {

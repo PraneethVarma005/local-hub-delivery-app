@@ -74,13 +74,7 @@ const ShopList = () => {
         {viewMode === 'map' ? (
           <div className="mb-6">
             <GoogleMap
-              shops={filteredShops.map(shop => ({
-                id: shop.id,
-                name: shop.name,
-                lat: shop.lat,
-                lng: shop.lng,
-                category: shop.category
-              }))}
+              shops={filteredShops}
               height="500px"
               showShops={true}
             />
