@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -52,6 +53,7 @@ const Register = () => {
       const userData = {
         name: formData.name,
         phone: formData.phone,
+        role: formData.role,
         ...(formData.role === 'shop_owner' && {
           shop_name: formData.shopName,
           shop_category: formData.shopCategory,
@@ -62,14 +64,22 @@ const Register = () => {
         }),
       }
 
-      await signUp(formData.email, formData.password, formData.role, userData)
+      const { error } = await signUp(formData.email, formData.password, userData)
       
-      toast({
-        title: 'Account created successfully!',
-        description: 'Please check your email to verify your account.',
-      })
-      
-      navigate('/auth/login')
+      if (error) {
+        toast({
+          title: 'Registration failed',
+          description: error.message,
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Account created successfully!',
+          description: 'Please check your email to verify your account.',
+        })
+        
+        navigate('/auth/login')
+      }
     } catch (error) {
       toast({
         title: 'Registration failed',

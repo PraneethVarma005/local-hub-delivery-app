@@ -22,17 +22,26 @@ const Login = () => {
     setLoading(true)
 
     try {
-      await signIn(email, password, role)
-      toast({
-        title: 'Welcome back!',
-        description: 'You have successfully logged in.',
-      })
+      const { error } = await signIn(email, password)
       
-      const dashboardPath = role === 'customer' ? '/customer/dashboard' 
-        : role === 'shop_owner' ? '/shop/dashboard' 
-        : '/delivery/dashboard'
-      
-      navigate(dashboardPath)
+      if (error) {
+        toast({
+          title: 'Login failed',
+          description: error.message,
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Welcome back!',
+          description: 'You have successfully logged in.',
+        })
+        
+        const dashboardPath = role === 'customer' ? '/customer/dashboard' 
+          : role === 'shop_owner' ? '/shop/dashboard' 
+          : '/delivery/dashboard'
+        
+        navigate(dashboardPath)
+      }
     } catch (error) {
       toast({
         title: 'Login failed',
