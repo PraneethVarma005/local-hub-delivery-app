@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,25 @@ const ShopList = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    console.log('ShopList component mounted')
+    console.log('Mock shops data:', mockShops)
+    
+    // Simulate loading time and check data
+    try {
+      if (!mockShops || mockShops.length === 0) {
+        throw new Error('No shops data available')
+      }
+      setLoading(false)
+    } catch (err) {
+      console.error('Error loading shops:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load shops')
+      setLoading(false)
+    }
+  }, [])
 
   const filteredShops = mockShops.filter(shop => {
     const matchesCategory = !selectedCategory || shop.category === selectedCategory
@@ -28,6 +47,30 @@ const ShopList = () => {
     { id: 'grocery', name: 'Grocery', count: getShopsByCategory('grocery').length },
     { id: 'medicine', name: 'Medicine', count: getShopsByCategory('medicine').length },
   ]
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading shops...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()} className="bg-[#16A085] hover:bg-[#16A085]/90">
+            Retry
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#F7F9F9] p-4">
