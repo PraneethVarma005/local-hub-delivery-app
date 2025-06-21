@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { MapPin, Clock, Star, Search } from 'lucide-react'
-import GoogleMap from '@/components/GoogleMap'
+import LeafletMap from '@/components/LeafletMap'
 import { mockShops, getShopsByCategory } from '@/data/mockShops'
 
 const ShopList = () => {
@@ -128,7 +128,7 @@ const ShopList = () => {
 
         {viewMode === 'map' ? (
           <div className="mb-6">
-            <GoogleMap
+            <LeafletMap
               shops={filteredShops.map(shop => ({
                 id: shop.id,
                 name: shop.name,

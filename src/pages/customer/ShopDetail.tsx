@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { MapPin, Clock, Star, ArrowLeft, Plus, Minus, ShoppingCart } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/contexts/CartContext'
-import GoogleMap from '@/components/GoogleMap'
+import LeafletMap from '@/components/LeafletMap'
 import { getShopById, getProductsByShop } from '@/data/mockShops'
 
 const ShopDetail = () => {
@@ -109,7 +109,7 @@ const ShopDetail = () => {
 
             {/* Map */}
             <div className="mt-4">
-              <GoogleMap
+              <LeafletMap
                 shops={[shop]}
                 height="300px"
                 showShops={true}

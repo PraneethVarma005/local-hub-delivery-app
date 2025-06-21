@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
-import { ShoppingCart, MapPin, Package, User } from 'lucide-react'
+import { ShoppingCart, MapPin, Package, User, Heart, Star, Bell } from 'lucide-react'
 
 const CustomerDashboard = () => {
   const { profile } = useAuth()
@@ -52,34 +52,98 @@ const CustomerDashboard = () => {
             </Card>
           </Link>
 
-          <Card className="opacity-75">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <ShoppingCart className="w-8 h-8 text-gray-400" />
-              </div>
-              <CardTitle className="text-gray-500">Favorites</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-gray-500 text-sm">
-                Coming soon - Save your favorite shops
-              </p>
+          <Link to="/customer/favorites">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader className="text-center">
+                <div className="mx-auto w-16 h-16 bg-[#16A085]/10 rounded-full flex items-center justify-center mb-4">
+                  <Heart className="w-8 h-8 text-[#16A085]" />
+                </div>
+                <CardTitle className="text-[#2C3E50]">Favorites</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-gray-600 text-sm">
+                  Your favorite shops and restaurants
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/profile">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader className="text-center">
+                <div className="mx-auto w-16 h-16 bg-[#16A085]/10 rounded-full flex items-center justify-center mb-4">
+                  <User className="w-8 h-8 text-[#16A085]" />
+                </div>
+                <CardTitle className="text-[#2C3E50]">Profile</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-gray-600 text-sm">
+                  Manage your profile and settings
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-[#16A085] mb-1">12</div>
+              <div className="text-sm text-gray-600">Total Orders</div>
             </CardContent>
           </Card>
-
-          <Card className="opacity-75">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <User className="w-8 h-8 text-gray-400" />
-              </div>
-              <CardTitle className="text-gray-500">Profile</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-gray-500 text-sm">
-                Coming soon - Manage your profile
-              </p>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-[#16A085] mb-1">5</div>
+              <div className="text-sm text-gray-600">Favorite Shops</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-[#16A085] mb-1">₹2,450</div>
+              <div className="text-sm text-gray-600">Total Spent</div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Recent Activity */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-[#2C3E50] flex items-center gap-2">
+              <Bell className="w-5 h-5" />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                <Package className="w-5 h-5 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-800">Order Delivered</p>
+                  <p className="text-sm text-green-600">Your order from Fresh Mart Grocery has been delivered</p>
+                </div>
+                <span className="text-xs text-green-500 ml-auto">2 hours ago</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                <Heart className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-800">New Favorite Added</p>
+                  <p className="text-sm text-blue-600">You added Spice Kitchen to your favorites</p>
+                </div>
+                <span className="text-xs text-blue-500 ml-auto">1 day ago</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
+                <Star className="w-5 h-5 text-orange-600" />
+                <div>
+                  <p className="font-medium text-orange-800">Review Submitted</p>
+                  <p className="text-sm text-orange-600">You rated Pizza Corner 5 stars</p>
+                </div>
+                <span className="text-xs text-orange-500 ml-auto">3 days ago</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <Card>
@@ -101,6 +165,11 @@ const CustomerDashboard = () => {
               <Link to="/customer/orders">
                 <Button variant="outline">
                   Track Order
+                </Button>
+              </Link>
+              <Link to="/customer/favorites">
+                <Button variant="outline">
+                  View Favorites
                 </Button>
               </Link>
             </div>

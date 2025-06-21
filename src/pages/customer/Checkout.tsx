@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { MapPin, Phone, User, MessageSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
-import GoogleMap from '@/components/GoogleMap'
+import LeafletMap from '@/components/LeafletMap'
 
 const Checkout = () => {
   const navigate = useNavigate()
@@ -127,7 +127,7 @@ const Checkout = () => {
                 </div>
                 <div>
                   <Label>Select Delivery Location on Map</Label>
-                  <GoogleMap
+                  <LeafletMap
                     onLocationSelect={handleLocationSelect}
                     selectedLocation={orderData.latitude && orderData.longitude ? 
                       { lat: orderData.latitude, lng: orderData.longitude } : undefined
