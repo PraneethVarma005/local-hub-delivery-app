@@ -12,10 +12,14 @@ const Navigation = () => {
 
   const handleSignOut = async () => {
     try {
+      console.log('Navigation: Starting sign out process')
       await signOut()
+      console.log('Navigation: Sign out completed, redirecting to home')
       navigate('/')
     } catch (error) {
-      console.error('Error signing out:', error)
+      console.error('Navigation: Error signing out:', error)
+      // Force navigation even if signOut fails
+      navigate('/')
     }
   }
 
@@ -46,7 +50,7 @@ const Navigation = () => {
               <>
                 <Link
                   to={getDashboardLink()}
-                  className="text-white hover:text-[#16A085] transition-colors"
+                  className="text-white hover:text-[#16A085]"
                 >
                   Dashboard
                 </Link>
@@ -62,7 +66,7 @@ const Navigation = () => {
               <>
                 <Link
                   to="/auth/login"
-                  className="text-white hover:text-[#16A085] transition-colors"
+                  className="text-white hover:text-[#16A085]"
                 >
                   Login
                 </Link>

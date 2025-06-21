@@ -17,20 +17,29 @@ const ShopList = () => {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('ShopList component mounted')
-    console.log('Mock shops data:', mockShops)
+    console.log('ShopList: Component mounted')
+    console.log('ShopList: Mock shops data:', mockShops)
     
-    // Simulate loading time and check data
-    try {
-      if (!mockShops || mockShops.length === 0) {
-        throw new Error('No shops data available')
+    // Simulate loading and data validation
+    const initializeShops = async () => {
+      try {
+        // Small delay to simulate loading
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        if (!mockShops || mockShops.length === 0) {
+          throw new Error('No shops data available')
+        }
+        
+        console.log('ShopList: Data loaded successfully, shops count:', mockShops.length)
+        setLoading(false)
+      } catch (err) {
+        console.error('ShopList: Error loading shops:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load shops')
+        setLoading(false)
       }
-      setLoading(false)
-    } catch (err) {
-      console.error('Error loading shops:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load shops')
-      setLoading(false)
     }
+
+    initializeShops()
   }, [])
 
   const filteredShops = mockShops.filter(shop => {
@@ -64,7 +73,10 @@ const ShopList = () => {
       <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()} className="bg-[#16A085] hover:bg-[#16A085]/90">
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="bg-[#16A085] hover:bg-[#16A085]/90"
+          >
             Retry
           </Button>
         </div>
@@ -117,7 +129,13 @@ const ShopList = () => {
         {viewMode === 'map' ? (
           <div className="mb-6">
             <GoogleMap
-              shops={filteredShops}
+              shops={filteredShops.map(shop => ({
+                id: shop.id,
+                name: shop.name,
+                lat: shop.lat,
+                lng: shop.lng,
+                category: shop.category
+              }))}
               height="500px"
               showShops={true}
             />
@@ -128,7 +146,7 @@ const ShopList = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredShops.map(shop => (
             <Link key={shop.id} to={`/customer/shop/${shop.id}`}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <Card className="hover:shadow-lg cursor-pointer h-full">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between mb-2">
                     <Badge 
