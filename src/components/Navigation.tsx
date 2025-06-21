@@ -11,16 +11,10 @@ const Navigation = () => {
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
-    try {
-      console.log('Navigation: Starting sign out process')
-      await signOut()
-      console.log('Navigation: Sign out completed, redirecting to home')
-      navigate('/')
-    } catch (error) {
-      console.error('Navigation: Error signing out:', error)
-      // Force navigation even if signOut fails
-      navigate('/')
-    }
+    console.log('Navigation: Starting sign out process')
+    await signOut()
+    console.log('Navigation: Sign out completed, redirecting to home')
+    navigate('/')
   }
 
   const getDashboardLink = () => {

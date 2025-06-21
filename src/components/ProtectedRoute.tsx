@@ -17,8 +17,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return (
       <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#16A085] mx-auto"></div>
+          <p className="mt-2 text-gray-600 text-sm">Loading...</p>
         </div>
       </div>
     )
@@ -30,20 +30,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   }
 
   if (!profile) {
-    console.log('ProtectedRoute: No profile, showing loading or creating one')
-    return (
-      <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Setting up your profile...</p>
-        </div>
-      </div>
-    )
+    console.log('ProtectedRoute: No profile, redirecting to login')
+    return <Navigate to="/auth/login" replace />
   }
 
   if (!allowedRoles.includes(profile.role)) {
     console.log('ProtectedRoute: Role not allowed, redirecting to appropriate dashboard')
-    // Redirect to appropriate dashboard based on user role
     const redirectPath = profile.role === 'customer' ? '/customer/dashboard' 
       : profile.role === 'shop_owner' ? '/shop/dashboard' 
       : '/delivery/dashboard'
