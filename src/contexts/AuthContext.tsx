@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -65,9 +64,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (session?.user) {
-          console.log('User signed in:', session.user.id)
+          console.log('User signed in:', session.user.id, 'Role from metadata:', session.user.user_metadata?.role)
           setUser(session.user)
           
+          // Set basic profile from metadata immediately
           const basicProfile: UserProfile = {
             id: session.user.id,
             email: session.user.email!,
@@ -77,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(basicProfile)
           setLoading(false)
           
+          // Fetch detailed profile in background
           if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             setTimeout(() => {
               if (mounted) {
@@ -91,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
-        console.log('Initial session check:', session?.user?.id, error)
+        console.log('Initial session check:', session?.user?.id, 'Role:', session?.user?.user_metadata?.role, error)
         
         if (error) {
           console.error('Session check error:', error)
@@ -145,55 +146,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single()
       
       if (error && error.code === 'PGRST116') {
-        console.log('Creating profile for user:', user.id)
-        const metadata = user.user_metadata || {}
-        
-        const newProfile = {
-          id: user.id,
-          email: user.email!,
-          full_name: metadata.full_name || metadata.name || '',
-          phone: metadata.phone || '',
-          role: metadata.role || 'customer',
-          latitude: metadata.latitude || null,
-          longitude: metadata.longitude || null,
-          shop_name: metadata.shop_name || null,
-          shop_category: metadata.shop_category || null,
-          shop_address: metadata.shop_address || null,
-          shop_lat: metadata.shop_lat || null,
-          shop_lng: metadata.shop_lng || null,
-          vehicle_type: metadata.vehicle_type || null,
-          is_online: metadata.role === 'delivery_partner' ? true : null
-        }
-
-        const { data: insertedProfile, error: insertError } = await supabase
-          .from('user_profiles')
-          .insert([newProfile])
-          .select()
-          .single()
-
-        if (!insertError && insertedProfile) {
-          console.log('Profile created successfully:', insertedProfile)
-          setProfile(insertedProfile)
-          
-          // Send notification for new shop
-          if (insertedProfile.role === 'shop_owner') {
-            try {
-              await fetch('/functions/v1/send-notification', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  type: 'new_shop',
-                  shopId: insertedProfile.id
-                })
-              })
-            } catch (error) {
-              console.error('Failed to send new shop notification:', error)
-            }
-          }
-        }
+        console.log('No profile found, user should already have one from trigger')
+        // Profile should be created by trigger, but if not, keep the basic one
       } else if (!error && profileData) {
         console.log('Profile fetched successfully:', profileData)
         setProfile(profileData)
+      } else {
+        console.error('Error fetching profile:', error)
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error)
@@ -218,42 +177,81 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const signUp = async (email: string, password: string, userData: any) => {
-    console.log('Attempting sign up for:', email)
+    console.log('Attempting sign up for:', email, 'with role:', userData.role)
     setLoading(true)
     
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: userData.name,
-          role: userData.role,
-          phone: userData.phone,
-          ...(userData.role === 'shop_owner' && {
-            shop_name: userData.shop_name,
-            shop_category: userData.shop_category,
-            shop_address: userData.shop_address,
-          }),
-          ...(userData.role === 'delivery_partner' && {
-            vehicle_type: userData.vehicle_type,
-          }),
+    try {
+      // Send verification email first
+      const redirectUrl = `${window.location.origin}/auth/login`
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: userData.name,
+            role: userData.role,
+            phone: userData.phone,
+            ...(userData.role === 'shop_owner' && {
+              shop_name: userData.shop_name,
+              shop_category: userData.shop_category,
+              shop_address: userData.shop_address,
+              shop_lat: userData.shop_lat,
+              shop_lng: userData.shop_lng,
+            }),
+            ...(userData.role === 'customer' && {
+              latitude: userData.latitude,
+              longitude: userData.longitude,
+            }),
+            ...(userData.role === 'delivery_partner' && {
+              vehicle_type: userData.vehicle_type,
+              latitude: userData.latitude,
+              longitude: userData.longitude,
+            }),
+          }
+        }
+      })
+      
+      if (!error) {
+        // Send verification email
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-verification-email', {
+            body: {
+              email: email,
+              confirmationUrl: redirectUrl,
+              userType: userData.role,
+              userName: userData.name
+            }
+          })
+          
+          if (emailError) {
+            console.error('Failed to send verification email:', emailError)
+          } else {
+            console.log('Verification email sent successfully')
+          }
+        } catch (emailError) {
+          console.error('Error sending verification email:', emailError)
         }
       }
-    })
-    
-    if (error) {
-      console.error('Sign up error:', error)
+      
+      if (error) {
+        console.error('Sign up error:', error)
+        setLoading(false)
+      }
+      
+      return { error }
+    } catch (error) {
+      console.error('Sign up failed:', error)
       setLoading(false)
+      return { error }
     }
-    
-    return { error }
   }
 
   const signOut = async () => {
     console.log('Signing out user')
     
     try {
-      // Clear state immediately for better UX
       setUser(null)
       setProfile(null)
       

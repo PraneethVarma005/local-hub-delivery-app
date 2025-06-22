@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -11,11 +11,24 @@ import { useToast } from '@/hooks/use-toast'
 const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('customer')
   const [loading, setLoading] = useState(false)
-  const { signIn } = useAuth()
+  const { signIn, user, profile, userRole } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Redirect authenticated users to appropriate dashboard
+  useEffect(() => {
+    if (user && profile && !loading) {
+      console.log('User authenticated, redirecting based on role:', profile.role)
+      
+      const dashboardPath = profile.role === 'customer' ? '/customer/dashboard' 
+        : profile.role === 'shop_owner' ? '/shop/dashboard' 
+        : '/delivery/dashboard'
+      
+      navigate(dashboardPath, { replace: true })
+    }
+  }, [user, profile, userRole, loading, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,17 +43,13 @@ const Login = () => {
           description: error.message,
           variant: 'destructive',
         })
+        setLoading(false)
       } else {
         toast({
           title: 'Welcome back!',
           description: 'You have successfully logged in.',
         })
-        
-        const dashboardPath = role === 'customer' ? '/customer/dashboard' 
-          : role === 'shop_owner' ? '/shop/dashboard' 
-          : '/delivery/dashboard'
-        
-        navigate(dashboardPath)
+        // Navigation will be handled by useEffect
       }
     } catch (error) {
       toast({
@@ -48,7 +57,6 @@ const Login = () => {
         description: error instanceof Error ? error.message : 'Please check your credentials',
         variant: 'destructive',
       })
-    } finally {
       setLoading(false)
     }
   }
@@ -65,20 +73,6 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="role">I am a</Label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
-              >
-                <option value="customer">Customer</option>
-                <option value="shop_owner">Shop Owner</option>
-                <option value="delivery_partner">Delivery Partner</option>
-              </select>
-            </div>
-
-            <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -87,6 +81,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="mt-1"
+                placeholder="Enter your email"
               />
             </div>
 
@@ -99,6 +94,7 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="mt-1"
+                placeholder="Enter your password"
               />
             </div>
 

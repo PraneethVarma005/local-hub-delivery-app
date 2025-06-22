@@ -11,7 +11,13 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const { user, profile, loading } = useAuth()
 
-  console.log('ProtectedRoute: user =', !!user, 'profile =', !!profile, 'loading =', loading, 'role =', profile?.role)
+  console.log('ProtectedRoute check:', {
+    hasUser: !!user,
+    hasProfile: !!profile,
+    loading,
+    userRole: profile?.role,
+    allowedRoles
+  })
 
   if (loading) {
     return (
@@ -35,14 +41,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   }
 
   if (!allowedRoles.includes(profile.role)) {
-    console.log('ProtectedRoute: Role not allowed, redirecting to appropriate dashboard')
+    console.log('ProtectedRoute: Role not allowed. User role:', profile.role, 'Allowed:', allowedRoles)
+    
+    // Redirect to correct dashboard based on user's actual role
     const redirectPath = profile.role === 'customer' ? '/customer/dashboard' 
       : profile.role === 'shop_owner' ? '/shop/dashboard' 
       : '/delivery/dashboard'
+    
+    console.log('Redirecting to:', redirectPath)
     return <Navigate to={redirectPath} replace />
   }
 
-  console.log('ProtectedRoute: Access granted')
+  console.log('ProtectedRoute: Access granted for role:', profile.role)
   return <>{children}</>
 }
 

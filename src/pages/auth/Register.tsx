@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import LocationPicker from '@/components/LocationPicker'
+import CurrentLocationButton from '@/components/CurrentLocationButton'
 import LeafletMap from '@/components/LeafletMap'
 
 const Register = () => {
@@ -19,18 +19,16 @@ const Register = () => {
     name: '',
     phone: '',
     // Shop owner specific
-    shopName: '',
-    shopCategory: 'food',
-    shopAddress: '',
-    shopLat: 0,
-    shopLng: 0,
-    // Customer location
-    customerLat: 0,
-    customerLng: 0,
+    shop_name: '',
+    shop_category: 'food',
+    shop_address: '',
+    shop_lat: 0,
+    shop_lng: 0,
+    // Customer/Delivery location
+    latitude: 0,
+    longitude: 0,
     // Delivery partner specific
-    vehicleType: 'bicycle',
-    deliveryLat: 0,
-    deliveryLng: 0,
+    vehicle_type: 'bicycle',
   })
   const [loading, setLoading] = useState(false)
   const { signUp } = useAuth()
@@ -48,21 +46,15 @@ const Register = () => {
     if (formData.role === 'shop_owner') {
       setFormData(prev => ({
         ...prev,
-        shopLat: lat,
-        shopLng: lng,
-        shopAddress: address || prev.shopAddress
+        shop_lat: lat,
+        shop_lng: lng,
+        shop_address: address || prev.shop_address
       }))
-    } else if (formData.role === 'customer') {
+    } else {
       setFormData(prev => ({
         ...prev,
-        customerLat: lat,
-        customerLng: lng
-      }))
-    } else if (formData.role === 'delivery_partner') {
-      setFormData(prev => ({
-        ...prev,
-        deliveryLat: lat,
-        deliveryLng: lng
+        latitude: lat,
+        longitude: lng
       }))
     }
   }
@@ -79,6 +71,15 @@ const Register = () => {
       return
     }
 
+    if (formData.password.length < 6) {
+      toast({
+        title: 'Password too short',
+        description: 'Password must be at least 6 characters long',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -87,20 +88,20 @@ const Register = () => {
         phone: formData.phone,
         role: formData.role,
         ...(formData.role === 'shop_owner' && {
-          shop_name: formData.shopName,
-          shop_category: formData.shopCategory,
-          shop_address: formData.shopAddress,
-          shop_lat: formData.shopLat,
-          shop_lng: formData.shopLng,
+          shop_name: formData.shop_name,
+          shop_category: formData.shop_category,
+          shop_address: formData.shop_address,
+          shop_lat: formData.shop_lat,
+          shop_lng: formData.shop_lng,
         }),
         ...(formData.role === 'customer' && {
-          latitude: formData.customerLat,
-          longitude: formData.customerLng,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
         }),
         ...(formData.role === 'delivery_partner' && {
-          vehicle_type: formData.vehicleType,
-          latitude: formData.deliveryLat,
-          longitude: formData.deliveryLng,
+          vehicle_type: formData.vehicle_type,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
         }),
       }
 
@@ -115,7 +116,7 @@ const Register = () => {
       } else {
         toast({
           title: 'Account created successfully!',
-          description: 'Please check your email to verify your account.',
+          description: 'Please check your email to verify your account, then you can login.',
         })
         
         navigate('/auth/login')
@@ -132,14 +133,11 @@ const Register = () => {
   }
 
   const getSelectedLocation = () => {
-    if (formData.role === 'shop_owner' && formData.shopLat && formData.shopLng) {
-      return { lat: formData.shopLat, lng: formData.shopLng }
+    if (formData.role === 'shop_owner' && formData.shop_lat && formData.shop_lng) {
+      return { lat: formData.shop_lat, lng: formData.shop_lng }
     }
-    if (formData.role === 'customer' && formData.customerLat && formData.customerLng) {
-      return { lat: formData.customerLat, lng: formData.customerLng }
-    }
-    if (formData.role === 'delivery_partner' && formData.deliveryLat && formData.deliveryLng) {
-      return { lat: formData.deliveryLat, lng: formData.deliveryLng }
+    if ((formData.role === 'customer' || formData.role === 'delivery_partner') && formData.latitude && formData.longitude) {
+      return { lat: formData.latitude, lng: formData.longitude }
     }
     return undefined
   }
@@ -180,6 +178,7 @@ const Register = () => {
                   onChange={handleInputChange}
                   required
                   className="mt-1"
+                  placeholder="Enter your full name"
                 />
               </div>
               <div>
@@ -191,6 +190,7 @@ const Register = () => {
                   onChange={handleInputChange}
                   required
                   className="mt-1"
+                  placeholder="Enter your phone number"
                 />
               </div>
             </div>
@@ -205,6 +205,7 @@ const Register = () => {
                 onChange={handleInputChange}
                 required
                 className="mt-1"
+                placeholder="Enter your email"
               />
             </div>
 
@@ -219,6 +220,7 @@ const Register = () => {
                   onChange={handleInputChange}
                   required
                   className="mt-1"
+                  placeholder="Enter password (min 6 chars)"
                 />
               </div>
               <div>
@@ -231,6 +233,7 @@ const Register = () => {
                   onChange={handleInputChange}
                   required
                   className="mt-1"
+                  placeholder="Confirm your password"
                 />
               </div>
             </div>
@@ -238,45 +241,82 @@ const Register = () => {
             {formData.role === 'shop_owner' && (
               <>
                 <div>
-                  <Label htmlFor="shopName">Shop Name</Label>
+                  <Label htmlFor="shop_name">Shop Name</Label>
                   <Input
-                    id="shopName"
-                    name="shopName"
-                    value={formData.shopName}
+                    id="shop_name"
+                    name="shop_name"
+                    value={formData.shop_name}
                     onChange={handleInputChange}
                     required
                     className="mt-1"
+                    placeholder="Enter your shop name"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="shopCategory">Shop Category</Label>
+                  <Label htmlFor="shop_category">Shop Category</Label>
                   <select
-                    id="shopCategory"
-                    name="shopCategory"
-                    value={formData.shopCategory}
+                    id="shop_category"
+                    name="shop_category"
+                    value={formData.shop_category}
                     onChange={handleInputChange}
                     className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
                   >
-                    <option value="food">Food</option>
-                    <option value="grocery">Grocery</option>
-                    <option value="medicine">Medicine</option>
+                    <option value="food">Food & Restaurant</option>
+                    <option value="grocery">Grocery & Supermarket</option>
+                    <option value="medicine">Pharmacy & Medicine</option>
+                    <option value="electronics">Electronics</option>
+                    <option value="clothing">Clothing & Fashion</option>
+                    <option value="books">Books & Stationery</option>
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="shopAddress">Shop Address</Label>
+                  <Label htmlFor="shop_address">Shop Address</Label>
                   <Input
-                    id="shopAddress"
-                    name="shopAddress"
-                    value={formData.shopAddress}
+                    id="shop_address"
+                    name="shop_address"
+                    value={formData.shop_address}
                     onChange={handleInputChange}
                     required
                     className="mt-1"
+                    placeholder="Enter your shop address"
                   />
                 </div>
                 <div>
                   <Label>Shop Location</Label>
                   <div className="mt-2 space-y-2">
-                    <LocationPicker onLocationSelect={handleLocationSelect} />
+                    <CurrentLocationButton onLocationSelect={handleLocationSelect} />
+                    <LeafletMap
+                      onLocationSelect={handleLocationSelect}
+                      selectedLocation={getSelectedLocation()}
+                      height="200px"
+                      showLocationPicker={true}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {formData.role === 'delivery_partner' && (
+              <>
+                <div>
+                  <Label htmlFor="vehicle_type">Vehicle Type</Label>
+                  <select
+                    id="vehicle_type"
+                    name="vehicle_type"
+                    value={formData.vehicle_type}
+                    onChange={handleInputChange}
+                    className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
+                  >
+                    <option value="bicycle">Bicycle</option>
+                    <option value="motorcycle">Motorcycle</option>
+                    <option value="car">Car</option>
+                    <option value="scooter">Electric Scooter</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Your Location</Label>
+                  <div className="mt-2 space-y-2">
+                    <CurrentLocationButton onLocationSelect={handleLocationSelect} />
                     <LeafletMap
                       onLocationSelect={handleLocationSelect}
                       selectedLocation={getSelectedLocation()}
@@ -292,7 +332,7 @@ const Register = () => {
               <div>
                 <Label>Your Location (Optional)</Label>
                 <div className="mt-2 space-y-2">
-                  <LocationPicker onLocationSelect={handleLocationSelect} />
+                  <CurrentLocationButton onLocationSelect={handleLocationSelect} />
                   <LeafletMap
                     onLocationSelect={handleLocationSelect}
                     selectedLocation={getSelectedLocation()}
@@ -301,37 +341,6 @@ const Register = () => {
                   />
                 </div>
               </div>
-            )}
-
-            {formData.role === 'delivery_partner' && (
-              <>
-                <div>
-                  <Label htmlFor="vehicleType">Vehicle Type</Label>
-                  <select
-                    id="vehicleType"
-                    name="vehicleType"
-                    value={formData.vehicleType}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
-                  >
-                    <option value="bicycle">Bicycle</option>
-                    <option value="motorcycle">Motorcycle</option>
-                    <option value="car">Car</option>
-                  </select>
-                </div>
-                <div>
-                  <Label>Your Location</Label>
-                  <div className="mt-2 space-y-2">
-                    <LocationPicker onLocationSelect={handleLocationSelect} />
-                    <LeafletMap
-                      onLocationSelect={handleLocationSelect}
-                      selectedLocation={getSelectedLocation()}
-                      height="200px"
-                      showLocationPicker={true}
-                    />
-                  </div>
-                </div>
-              </>
             )}
 
             <Button
