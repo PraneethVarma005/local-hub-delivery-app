@@ -9,6 +9,7 @@ import { MapPin, Phone, User, MessageSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 import LeafletMap from '@/components/LeafletMap'
+import LocationPicker from '@/components/LocationPicker'
 
 const Checkout = () => {
   const navigate = useNavigate()
@@ -32,12 +33,12 @@ const Checkout = () => {
   const deliveryFee = 25
   const total = subtotal + deliveryFee
 
-  const handleLocationSelect = (lat: number, lng: number, address: string) => {
+  const handleLocationSelect = (lat: number, lng: number, address?: string) => {
     setOrderData(prev => ({
       ...prev,
       latitude: lat,
       longitude: lng,
-      address: address
+      address: address || prev.address
     }))
   }
 
@@ -52,13 +53,23 @@ const Checkout = () => {
     }
 
     try {
-      // Simulate order placement (skip actual database for now)
+      // Send notification to shop owner and delivery partners
+      await fetch('/functions/v1/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'new_order',
+          orderId: 'ORD-' + Date.now(),
+          customerLocation: { lat: orderData.latitude, lng: orderData.longitude },
+          data: { shopOwnerId: 'shop-owner-id' } // In real app, get from context
+        })
+      })
+
       toast({
         title: "Order Placed Successfully!",
-        description: "Your order has been placed and will be processed soon.",
+        description: "Your order has been placed and notifications sent to shop owner and delivery partners.",
       })
       
-      // Navigate to orders page
       navigate('/customer/orders')
     } catch (error) {
       toast({
@@ -125,8 +136,9 @@ const Checkout = () => {
                     placeholder="Click on the map or enter address manually"
                   />
                 </div>
-                <div>
-                  <Label>Select Delivery Location on Map</Label>
+                <div className="space-y-2">
+                  <Label>Select Delivery Location</Label>
+                  <LocationPicker onLocationSelect={handleLocationSelect} />
                   <LeafletMap
                     onLocationSelect={handleLocationSelect}
                     selectedLocation={orderData.latitude && orderData.longitude ? 

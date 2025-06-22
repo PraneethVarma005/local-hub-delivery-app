@@ -49,7 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     console.log('AuthProvider: Setting up auth state listener')
     
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
@@ -68,7 +67,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('User signed in:', session.user.id)
           setUser(session.user)
           
-          // Create basic profile immediately to prevent blocking
           const basicProfile: UserProfile = {
             id: session.user.id,
             email: session.user.email!,
@@ -78,7 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(basicProfile)
           setLoading(false)
           
-          // Fetch detailed profile in background
           if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             setTimeout(() => {
               if (mounted) {
@@ -90,7 +87,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     )
 
-    // Check for existing session
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
@@ -105,7 +101,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user && mounted) {
           setUser(session.user)
           
-          // Create basic profile immediately
           const basicProfile: UserProfile = {
             id: session.user.id,
             email: session.user.email!,
@@ -115,7 +110,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(basicProfile)
           setLoading(false)
           
-          // Fetch detailed profile in background
           setTimeout(() => {
             if (mounted) {
               fetchProfile(session.user)
@@ -150,7 +144,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single()
       
       if (error && error.code === 'PGRST116') {
-        // Profile doesn't exist, create it
         console.log('Creating profile for user:', user.id)
         const metadata = user.user_metadata || {}
         
@@ -160,10 +153,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           full_name: metadata.full_name || metadata.name || '',
           phone: metadata.phone || '',
           role: metadata.role || 'customer',
+          latitude: metadata.latitude || null,
+          longitude: metadata.longitude || null,
           shop_name: metadata.shop_name || null,
           shop_category: metadata.shop_category || null,
           shop_address: metadata.shop_address || null,
-          vehicle_type: metadata.vehicle_type || null
+          shop_lat: metadata.shop_lat || null,
+          shop_lng: metadata.shop_lng || null,
+          vehicle_type: metadata.vehicle_type || null,
+          is_online: metadata.role === 'delivery_partner' ? true : null
         }
 
         const { data: insertedProfile, error: insertError } = await supabase
@@ -175,6 +173,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!insertError && insertedProfile) {
           console.log('Profile created successfully:', insertedProfile)
           setProfile(insertedProfile)
+          
+          // Send notification for new shop
+          if (insertedProfile.role === 'shop_owner') {
+            try {
+              await fetch('/functions/v1/send-notification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'new_shop',
+                  shopId: insertedProfile.id
+                })
+              })
+            } catch (error) {
+              console.error('Failed to send new shop notification:', error)
+            }
+          }
         }
       } else if (!error && profileData) {
         console.log('Profile fetched successfully:', profileData)
@@ -182,7 +196,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error)
-      // Keep the basic profile we already set
     }
   }
 
