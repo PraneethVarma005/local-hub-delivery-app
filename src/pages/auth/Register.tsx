@@ -5,11 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import CurrentLocationButton from '@/components/CurrentLocationButton'
 import LeafletMap from '@/components/LeafletMap'
 import LanguageSelector from '@/components/LanguageSelector'
+import PrivacyPolicyDialog from '@/components/PrivacyPolicyDialog'
+import ReturnPolicyDialog from '@/components/ReturnPolicyDialog'
 import { useLanguage } from '@/hooks/useLanguage'
 
 const Register = () => {
@@ -31,6 +34,9 @@ const Register = () => {
     longitude: 0,
     // Delivery partner specific
     vehicle_type: 'bicycle',
+    // Privacy agreements
+    privacy_policy_accepted: false,
+    return_policy_accepted: false,
   })
   const [loading, setLoading] = useState(false)
   const { signUp } = useAuth()
@@ -42,6 +48,13 @@ const Register = () => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
+    }))
+  }
+
+  const handleCheckboxChange = (field: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: checked
     }))
   }
 
@@ -83,13 +96,36 @@ const Register = () => {
       return
     }
 
+    if (!formData.privacy_policy_accepted) {
+      toast({
+        title: 'Privacy Policy Required',
+        description: 'Please accept the Privacy Policy to continue',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!formData.return_policy_accepted) {
+      toast({
+        title: 'Return Policy Required',
+        description: 'Please accept the Return Policy to continue',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setLoading(true)
 
     try {
+      const redirectUrl = `${window.location.origin}/auth/login`
+      
       const userData = {
         name: formData.name,
         phone: formData.phone,
         role: formData.role,
+        privacy_policy_accepted: formData.privacy_policy_accepted,
+        return_policy_accepted: formData.return_policy_accepted,
+        terms_accepted: true,
         ...(formData.role === 'shop_owner' && {
           shop_name: formData.shop_name,
           shop_category: formData.shop_category,
@@ -119,7 +155,7 @@ const Register = () => {
       } else {
         toast({
           title: 'Account created successfully!',
-          description: 'You can now login with your credentials.',
+          description: 'Please check your email to verify your account, then you can login.',
         })
         
         navigate('/auth/login')
@@ -161,7 +197,7 @@ const Register = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="role">I am a</Label>
+              <Label htmlFor="role">{t('iAmA')}</Label>
               <select
                 id="role"
                 name="role"
@@ -169,15 +205,15 @@ const Register = () => {
                 onChange={handleInputChange}
                 className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
               >
-                <option value="customer">Customer</option>
-                <option value="shop_owner">Shop Owner</option>
-                <option value="delivery_partner">Delivery Partner</option>
+                <option value="customer">{t('customer')}</option>
+                <option value="shop_owner">{t('shopOwner')}</option>
+                <option value="delivery_partner">{t('deliveryPartner')}</option>
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">{t('fullName')}</Label>
                 <Input
                   id="name"
                   name="name"
@@ -185,11 +221,11 @@ const Register = () => {
                   onChange={handleInputChange}
                   required
                   className="mt-1"
-                  placeholder="Enter your full name"
+                  placeholder={`Enter your ${t('fullName').toLowerCase()}`}
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">{t('phone')}</Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -197,13 +233,13 @@ const Register = () => {
                   onChange={handleInputChange}
                   required
                   className="mt-1"
-                  placeholder="Enter your phone number"
+                  placeholder={`Enter your ${t('phone').toLowerCase()}`}
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 name="email"
@@ -212,13 +248,13 @@ const Register = () => {
                 onChange={handleInputChange}
                 required
                 className="mt-1"
-                placeholder="Enter your email"
+                placeholder={`Enter your ${t('email').toLowerCase()}`}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('password')}</Label>
                 <Input
                   id="password"
                   name="password"
@@ -231,7 +267,7 @@ const Register = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -248,7 +284,7 @@ const Register = () => {
             {formData.role === 'shop_owner' && (
               <>
                 <div>
-                  <Label htmlFor="shop_name">Shop Name</Label>
+                  <Label htmlFor="shop_name">{t('shopName')}</Label>
                   <Input
                     id="shop_name"
                     name="shop_name"
@@ -256,11 +292,11 @@ const Register = () => {
                     onChange={handleInputChange}
                     required
                     className="mt-1"
-                    placeholder="Enter your shop name"
+                    placeholder={`Enter your ${t('shopName').toLowerCase()}`}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="shop_category">Shop Category</Label>
+                  <Label htmlFor="shop_category">{t('shopCategory')}</Label>
                   <select
                     id="shop_category"
                     name="shop_category"
@@ -268,13 +304,13 @@ const Register = () => {
                     onChange={handleInputChange}
                     className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
                   >
-                    <option value="food">Food</option>
-                    <option value="groceries">Groceries</option>
-                    <option value="medicine">Medicine</option>
+                    <option value="food">{t('food')}</option>
+                    <option value="groceries">{t('groceries')}</option>
+                    <option value="medicine">{t('medicine')}</option>
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="shop_address">Shop Address</Label>
+                  <Label htmlFor="shop_address">{t('shopAddress')}</Label>
                   <Input
                     id="shop_address"
                     name="shop_address"
@@ -282,11 +318,11 @@ const Register = () => {
                     onChange={handleInputChange}
                     required
                     className="mt-1"
-                    placeholder="Enter your shop address"
+                    placeholder={`Enter your ${t('shopAddress').toLowerCase()}`}
                   />
                 </div>
                 <div>
-                  <Label>Shop Location</Label>
+                  <Label>{t('shopLocation')}</Label>
                   <div className="mt-2 space-y-2">
                     <CurrentLocationButton onLocationSelect={handleLocationSelect} />
                     <LeafletMap
@@ -303,7 +339,7 @@ const Register = () => {
             {formData.role === 'delivery_partner' && (
               <>
                 <div>
-                  <Label htmlFor="vehicle_type">Vehicle Type</Label>
+                  <Label htmlFor="vehicle_type">{t('vehicleType')}</Label>
                   <select
                     id="vehicle_type"
                     name="vehicle_type"
@@ -311,14 +347,14 @@ const Register = () => {
                     onChange={handleInputChange}
                     className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
                   >
-                    <option value="bicycle">Bicycle</option>
-                    <option value="motorcycle">Motorcycle</option>
-                    <option value="car">Car</option>
-                    <option value="scooter">Electric Scooter</option>
+                    <option value="bicycle">{t('bicycle')}</option>
+                    <option value="motorcycle">{t('motorcycle')}</option>
+                    <option value="car">{t('car')}</option>
+                    <option value="scooter">{t('scooter')}</option>
                   </select>
                 </div>
                 <div>
-                  <Label>Your Location</Label>
+                  <Label>{t('yourLocation')}</Label>
                   <div className="mt-2 space-y-2">
                     <CurrentLocationButton onLocationSelect={handleLocationSelect} />
                     <LeafletMap
@@ -334,7 +370,7 @@ const Register = () => {
 
             {formData.role === 'customer' && (
               <div>
-                <Label>Your Location (Optional)</Label>
+                <Label>{t('yourLocation')} (Optional)</Label>
                 <div className="mt-2 space-y-2">
                   <CurrentLocationButton onLocationSelect={handleLocationSelect} />
                   <LeafletMap
@@ -347,23 +383,64 @@ const Register = () => {
               </div>
             )}
 
+            {/* Privacy Policy and Return Policy Checkboxes */}
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="privacy_policy"
+                  checked={formData.privacy_policy_accepted}
+                  onCheckedChange={(checked) => handleCheckboxChange('privacy_policy_accepted', checked as boolean)}
+                />
+                <div className="text-sm">
+                  <span>I agree to the </span>
+                  <PrivacyPolicyDialog userType={formData.role as 'customer' | 'shop_owner' | 'delivery_partner'}>
+                    <button
+                      type="button"
+                      className="text-[#16A085] hover:underline font-medium"
+                    >
+                      {t('privacyPolicy')}
+                    </button>
+                  </PrivacyPolicyDialog>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="return_policy"
+                  checked={formData.return_policy_accepted}
+                  onCheckedChange={(checked) => handleCheckboxChange('return_policy_accepted', checked as boolean)}
+                />
+                <div className="text-sm">
+                  <span>I agree to the </span>
+                  <ReturnPolicyDialog userType={formData.role as 'customer' | 'shop_owner' | 'delivery_partner'}>
+                    <button
+                      type="button"
+                      className="text-[#16A085] hover:underline font-medium"
+                    >
+                      {t('returnPolicy')}
+                    </button>
+                  </ReturnPolicyDialog>
+                </div>
+              </div>
+            </div>
+
             <Button
               type="submit"
               disabled={loading}
               className="w-full bg-[#16A085] hover:bg-[#16A085]/90"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? 'Creating account...' : t('createAccount')}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Already have an account?{' '}
+              {t('alreadyHaveAccount')}{' '}
               <Link
                 to="/auth/login"
                 className="text-[#16A085] hover:underline font-medium"
               >
-                Sign in here
+                {t('signInHere')}
               </Link>
             </p>
           </div>

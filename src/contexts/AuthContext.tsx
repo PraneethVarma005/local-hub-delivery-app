@@ -1,10 +1,11 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User } from '@supabase/supabase-js'
+import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
 interface AuthContextType {
   user: User | null
+  session: Session | null
   profile: any | null
   loading: boolean
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>
@@ -25,6 +26,7 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -51,24 +53,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   useEffect(() => {
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth event:', event, session)
+        console.log('Auth state change:', event, session?.user?.email)
+        
+        setSession(session)
+        setUser(session?.user ?? null)
         
         if (session?.user) {
-          setUser(session.user)
-          const userProfile = await fetchProfile(session.user.id)
-          setProfile(userProfile)
-          console.log('User profile loaded:', userProfile)
+          // Defer profile fetching to prevent blocking
+          setTimeout(async () => {
+            const userProfile = await fetchProfile(session.user.id)
+            setProfile(userProfile)
+            console.log('User profile loaded:', userProfile)
+          }, 0)
         } else {
           console.log('User signed out or no session')
-          setUser(null)
           setProfile(null)
         }
         
         setLoading(false)
       }
     )
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email)
+      setSession(session)
+      setUser(session?.user ?? null)
+      
+      if (session?.user) {
+        fetchProfile(session.user.id).then(profile => {
+          setProfile(profile)
+          setLoading(false)
+        })
+      } else {
+        setLoading(false)
+      }
+    })
 
     return () => subscription.unsubscribe()
   }, [])
@@ -77,10 +100,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('SignUp attempt for:', email, 'with data:', userData)
       
+      const redirectUrl = `${window.location.origin}/auth/login`
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             full_name: userData.name,
             ...userData
@@ -115,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error }
       }
 
-      console.log('SignIn successful:', data)
+      console.log('SignIn successful:', data.user?.email)
       return { error: null }
     } catch (error) {
       console.error('SignIn exception:', error)
@@ -127,11 +153,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.signOut()
     if (error) {
       console.error('SignOut error:', error)
+    } else {
+      setUser(null)
+      setSession(null)
+      setProfile(null)
     }
   }
 
   const value = {
     user,
+    session,
     profile,
     loading,
     signUp,
@@ -140,7 +171,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userRole: profile?.role || null
   }
 
-  console.log('Initial session check:', user, 'Role:', profile?.role, profile)
+  console.log('Auth state:', {
+    hasUser: !!user,
+    hasSession: !!session,
+    hasProfile: !!profile,
+    loading,
+    role: profile?.role
+  })
 
   return (
     <AuthContext.Provider value={value}>

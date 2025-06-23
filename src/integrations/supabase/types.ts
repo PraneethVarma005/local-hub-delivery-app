@@ -9,7 +9,233 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      delivery_tracking: {
+        Row: {
+          current_lat: number
+          current_lng: number
+          delivery_partner_id: string
+          id: string
+          order_id: string
+          status: string
+          timestamp: string | null
+        }
+        Insert: {
+          current_lat: number
+          current_lng: number
+          delivery_partner_id: string
+          id?: string
+          order_id: string
+          status: string
+          timestamp?: string | null
+        }
+        Update: {
+          current_lat?: number
+          current_lng?: number
+          delivery_partner_id?: string
+          id?: string
+          order_id?: string
+          status?: string
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_tracking_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          delivery_address: string
+          delivery_lat: number | null
+          delivery_lng: number | null
+          delivery_partner_id: string | null
+          estimated_delivery_time: string | null
+          id: string
+          items: Json
+          pickup_address: string
+          pickup_lat: number | null
+          pickup_lng: number | null
+          shop_id: string
+          status: string
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          delivery_address: string
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          delivery_partner_id?: string | null
+          estimated_delivery_time?: string | null
+          id?: string
+          items: Json
+          pickup_address: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          shop_id: string
+          status?: string
+          total_amount: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          delivery_address?: string
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          delivery_partner_id?: string | null
+          estimated_delivery_time?: string | null
+          id?: string
+          items?: Json
+          pickup_address?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          shop_id?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_agreements: {
+        Row: {
+          accepted_at: string | null
+          id: string
+          privacy_policy_accepted: boolean | null
+          return_policy_accepted: boolean | null
+          terms_accepted: boolean | null
+          user_id: string
+          user_type: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          id?: string
+          privacy_policy_accepted?: boolean | null
+          return_policy_accepted?: boolean | null
+          terms_accepted?: boolean | null
+          user_id: string
+          user_type: string
+        }
+        Update: {
+          accepted_at?: string | null
+          id?: string
+          privacy_policy_accepted?: boolean | null
+          return_policy_accepted?: boolean | null
+          terms_accepted?: boolean | null
+          user_id?: string
+          user_type?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          is_online: boolean | null
+          latitude: number | null
+          longitude: number | null
+          phone: string | null
+          preferred_language: string | null
+          role: string
+          shop_address: string | null
+          shop_category: string | null
+          shop_lat: number | null
+          shop_lng: number | null
+          shop_name: string | null
+          updated_at: string | null
+          user_type: string
+          vehicle_type: string | null
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id: string
+          is_online?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string | null
+          preferred_language?: string | null
+          role: string
+          shop_address?: string | null
+          shop_category?: string | null
+          shop_lat?: number | null
+          shop_lng?: number | null
+          shop_name?: string | null
+          updated_at?: string | null
+          user_type: string
+          vehicle_type?: string | null
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          is_online?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string | null
+          preferred_language?: string | null
+          role?: string
+          shop_address?: string | null
+          shop_category?: string | null
+          shop_lat?: number | null
+          shop_lng?: number | null
+          shop_name?: string | null
+          updated_at?: string | null
+          user_type?: string
+          vehicle_type?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
