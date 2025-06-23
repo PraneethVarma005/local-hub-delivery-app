@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import CurrentLocationButton from '@/components/CurrentLocationButton'
 import LeafletMap from '@/components/LeafletMap'
+import LanguageSelector from '@/components/LanguageSelector'
+import { useLanguage } from '@/hooks/useLanguage'
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -34,6 +36,7 @@ const Register = () => {
   const { signUp } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { t } = useLanguage()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({
@@ -116,7 +119,7 @@ const Register = () => {
       } else {
         toast({
           title: 'Account created successfully!',
-          description: 'Please check your email to verify your account, then you can login.',
+          description: 'You can now login with your credentials.',
         })
         
         navigate('/auth/login')
@@ -146,9 +149,13 @@ const Register = () => {
     <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-[#2C3E50]">
-            Join LocalHub
-          </CardTitle>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex-1"></div>
+            <CardTitle className="text-2xl font-bold text-[#2C3E50]">
+              {t('register')} - LocalHub
+            </CardTitle>
+            <LanguageSelector />
+          </div>
           <p className="text-gray-600">Create your account</p>
         </CardHeader>
         <CardContent>
@@ -261,12 +268,9 @@ const Register = () => {
                     onChange={handleInputChange}
                     className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
                   >
-                    <option value="food">Food & Restaurant</option>
-                    <option value="grocery">Grocery & Supermarket</option>
-                    <option value="medicine">Pharmacy & Medicine</option>
-                    <option value="electronics">Electronics</option>
-                    <option value="clothing">Clothing & Fashion</option>
-                    <option value="books">Books & Stationery</option>
+                    <option value="food">Food</option>
+                    <option value="groceries">Groceries</option>
+                    <option value="medicine">Medicine</option>
                   </select>
                 </div>
                 <div>

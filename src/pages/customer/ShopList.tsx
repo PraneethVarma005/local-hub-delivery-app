@@ -7,55 +7,91 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { MapPin, Clock, Star, Search } from 'lucide-react'
 import LeafletMap from '@/components/LeafletMap'
-import { mockShops, getShopsByCategory } from '@/data/mockShops'
+import { useAuth } from '@/contexts/AuthContext'
+import { useLocation } from '@/contexts/LocationContext'
+import { supabase } from '@/lib/supabase'
+import { calculateDistance, isWithinRadius } from '@/utils/distance'
+import { useLanguage } from '@/hooks/useLanguage'
+import LanguageSelector from '@/components/LanguageSelector'
 
 const ShopList = () => {
+  const [shops, setShops] = useState<any[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
+  const { userLocation } = useLocation()
+  const { t } = useLanguage()
 
   useEffect(() => {
-    console.log('ShopList: Component mounted')
-    console.log('ShopList: Mock shops data:', mockShops)
-    
-    // Simulate loading and data validation
-    const initializeShops = async () => {
-      try {
-        // Small delay to simulate loading
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        if (!mockShops || mockShops.length === 0) {
-          throw new Error('No shops data available')
-        }
-        
-        console.log('ShopList: Data loaded successfully, shops count:', mockShops.length)
-        setLoading(false)
-      } catch (err) {
-        console.error('ShopList: Error loading shops:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load shops')
-        setLoading(false)
-      }
-    }
-
-    initializeShops()
+    loadShops()
   }, [])
 
-  const filteredShops = mockShops.filter(shop => {
-    const matchesCategory = !selectedCategory || shop.category === selectedCategory
+  const loadShops = async () => {
+    try {
+      console.log('Loading shops from database...')
+      
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('role', 'shop_owner')
+        .order('average_rating', { ascending: false })
+
+      if (error) throw error
+
+      console.log('Shops loaded:', data)
+      setShops(data || [])
+      setLoading(false)
+    } catch (err) {
+      console.error('Error loading shops:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load shops')
+      setLoading(false)
+    }
+  }
+
+  const filteredShops = shops.filter(shop => {
+    // Filter by category
+    const matchesCategory = !selectedCategory || shop.shop_category === selectedCategory
+    
+    // Filter by search term
     const matchesSearch = !searchTerm || 
-      shop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      shop.address.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesCategory && matchesSearch
+      shop.shop_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shop.shop_address?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // Filter by location (within 10km radius)
+    let matchesLocation = true
+    if (userLocation && shop.shop_lat && shop.shop_lng) {
+      matchesLocation = isWithinRadius(
+        userLocation.lat,
+        userLocation.lng,
+        shop.shop_lat,
+        shop.shop_lng,
+        10
+      )
+    }
+    
+    return matchesCategory && matchesSearch && matchesLocation
   })
 
   const categories = [
-    { id: '', name: 'All', count: mockShops.length },
-    { id: 'food', name: 'Food', count: getShopsByCategory('food').length },
-    { id: 'grocery', name: 'Grocery', count: getShopsByCategory('grocery').length },
-    { id: 'medicine', name: 'Medicine', count: getShopsByCategory('medicine').length },
+    { id: '', name: 'All', count: shops.length },
+    { id: 'food', name: 'Food', count: shops.filter(s => s.shop_category === 'food').length },
+    { id: 'groceries', name: 'Groceries', count: shops.filter(s => s.shop_category === 'groceries').length },
+    { id: 'medicine', name: 'Medicine', count: shops.filter(s => s.shop_category === 'medicine').length },
   ]
+
+  const getDistanceText = (shop: any) => {
+    if (!userLocation || !shop.shop_lat || !shop.shop_lng) return ''
+    const distance = calculateDistance(
+      userLocation.lat,
+      userLocation.lng,
+      shop.shop_lat,
+      shop.shop_lng
+    )
+    return `${distance.toFixed(1)} km away`
+  }
 
   if (loading) {
     return (
@@ -87,9 +123,17 @@ const ShopList = () => {
   return (
     <div className="min-h-screen bg-[#F7F9F9] p-4">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-[#2C3E50] mb-2">Local Shops</h1>
-          <p className="text-gray-600">Discover and order from local shops near you</p>
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-[#2C3E50] mb-2">{t('nearbyShops')}</h1>
+            <p className="text-gray-600">Discover and order from local shops near you</p>
+            {userLocation && (
+              <p className="text-sm text-gray-500 mt-1">
+                Showing shops within 10km of your location
+              </p>
+            )}
+          </div>
+          <LanguageSelector />
         </div>
 
         {/* Search and Filters */}
@@ -98,7 +142,7 @@ const ShopList = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search shops..."
+                placeholder={t('search') + ' shops...'}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -131,10 +175,10 @@ const ShopList = () => {
             <LeafletMap
               shops={filteredShops.map(shop => ({
                 id: shop.id,
-                name: shop.name,
-                lat: shop.lat,
-                lng: shop.lng,
-                category: shop.category
+                name: shop.shop_name,
+                lat: shop.shop_lat,
+                lng: shop.shop_lng,
+                category: shop.shop_category
               }))}
               height="500px"
               showShops={true}
@@ -151,37 +195,46 @@ const ShopList = () => {
                   <div className="flex items-center justify-between mb-2">
                     <Badge 
                       className={`${
-                        shop.category === 'food' ? 'bg-orange-500' :
-                        shop.category === 'grocery' ? 'bg-green-500' :
+                        shop.shop_category === 'food' ? 'bg-orange-500' :
+                        shop.shop_category === 'groceries' ? 'bg-green-500' :
                         'bg-blue-500'
-                      } text-white`}
+                      } text-white capitalize`}
                     >
-                      {shop.category}
+                      {shop.shop_category}
                     </Badge>
-                    <Badge variant={shop.isOpen ? "default" : "secondary"}>
-                      {shop.isOpen ? 'Open' : 'Closed'}
+                    <Badge variant="default">
+                      Open
                     </Badge>
                   </div>
-                  <CardTitle className="text-[#2C3E50] text-lg">{shop.name}</CardTitle>
-                  <p className="text-sm text-gray-600">{shop.description}</p>
+                  <CardTitle className="text-[#2C3E50] text-lg">{shop.shop_name}</CardTitle>
+                  <p className="text-sm text-gray-600">{shop.full_name}</p>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex items-center text-sm text-gray-600">
                       <MapPin className="h-4 w-4 mr-1" />
-                      {shop.address}
+                      {shop.shop_address}
                     </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {shop.deliveryTime} • ₹{shop.deliveryFee} delivery
-                    </div>
+                    {userLocation && shop.shop_lat && shop.shop_lng && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Clock className="h-4 w-4 mr-1" />
+                        {getDistanceText(shop)}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                        <span className="text-sm font-medium">{shop.rating}</span>
+                        <span className="text-sm font-medium">
+                          {shop.average_rating || 'New'}
+                        </span>
+                        {shop.total_ratings && (
+                          <span className="text-xs text-gray-500 ml-1">
+                            ({shop.total_ratings})
+                          </span>
+                        )}
                       </div>
                       <span className="text-xs text-gray-500">
-                        {shop.openTime} - {shop.closeTime}
+                        9:00 AM - 9:00 PM
                       </span>
                     </div>
                   </div>
@@ -193,7 +246,17 @@ const ShopList = () => {
 
         {filteredShops.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No shops found matching your criteria</p>
+            <p className="text-gray-500 text-lg">
+              {userLocation 
+                ? 'No shops found within 10km of your location'
+                : 'No shops found matching your criteria'
+              }
+            </p>
+            {!userLocation && (
+              <p className="text-gray-400 text-sm mt-2">
+                Enable location access to see nearby shops
+              </p>
+            )}
           </div>
         )}
       </div>
