@@ -7,8 +7,8 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>
-  signIn: (email: string, password: string) => Promise<{ error: any }>
+  signUp: (email: string, password: string, userData: any, captchaToken?: string) => Promise<{ error: any }>
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
   userRole: string | null
 }
@@ -31,7 +31,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true
 
-    // Get initial session
     const getInitialSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
@@ -51,7 +50,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
@@ -72,20 +70,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [])
 
-  const signUp = async (email: string, password: string, userData: any) => {
+  const signUp = async (email: string, password: string, userData: any, captchaToken?: string) => {
     try {
       console.log('SignUp attempt for:', email)
       
       const redirectUrl = `${window.location.origin}/auth/login`
       
-      const { data, error } = await supabase.auth.signUp({
+      const signUpOptions: any = {
         email,
         password,
         options: {
           emailRedirectTo: redirectUrl,
           data: userData
         }
-      })
+      }
+
+      if (captchaToken) {
+        signUpOptions.options.captchaToken = captchaToken
+      }
+
+      const { data, error } = await supabase.auth.signUp(signUpOptions)
 
       if (error) {
         console.error('SignUp error:', error)
@@ -100,14 +104,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
     try {
       console.log('SignIn attempt for:', email)
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const signInOptions: any = {
         email,
         password
-      })
+      }
+
+      if (captchaToken) {
+        signInOptions.options = {
+          captchaToken: captchaToken
+        }
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword(signInOptions)
 
       if (error) {
         console.error('SignIn error:', error)
@@ -129,7 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  // Get user role from user metadata instead of profile table
   const getUserRole = () => {
     if (!user?.user_metadata) return 'customer'
     return user.user_metadata.role || 'customer'

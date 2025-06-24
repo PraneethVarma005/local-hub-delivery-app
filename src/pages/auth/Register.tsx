@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +12,9 @@ import CurrentLocationButton from '@/components/CurrentLocationButton'
 import LeafletMap from '@/components/LeafletMap'
 import PrivacyPolicyDialog from '@/components/PrivacyPolicyDialog'
 import ReturnPolicyDialog from '@/components/ReturnPolicyDialog'
+import HCaptcha, { HCaptchaRef } from '@/components/HCaptcha'
+
+const HCAPTCHA_SITE_KEY = '10000000-ffff-ffff-ffff-000000000001' // Test site key, replace with your actual site key
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -21,25 +24,23 @@ const Register = () => {
     role: 'customer',
     name: '',
     phone: '',
-    // Shop owner specific
     shop_name: '',
     shop_category: 'food',
     shop_address: '',
     shop_lat: 0,
     shop_lng: 0,
-    // Customer/Delivery location
     latitude: 0,
     longitude: 0,
-    // Delivery partner specific
     vehicle_type: 'bicycle',
-    // Privacy agreements
     privacy_policy_accepted: false,
     return_policy_accepted: false,
   })
   const [loading, setLoading] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const { signUp } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const hcaptchaRef = useRef<HCaptchaRef>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({
@@ -70,6 +71,19 @@ const Register = () => {
         longitude: lng
       }))
     }
+  }
+
+  const handleCaptchaVerify = (token: string) => {
+    setCaptchaToken(token)
+  }
+
+  const handleCaptchaError = () => {
+    setCaptchaToken(null)
+    toast({
+      title: 'Captcha Error',
+      description: 'Please try the captcha again',
+      variant: 'destructive',
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,13 +125,21 @@ const Register = () => {
       return
     }
 
+    if (!captchaToken) {
+      toast({
+        title: 'Captcha Required',
+        description: 'Please complete the captcha verification',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setLoading(true)
 
     try {
-      const redirectUrl = `${window.location.origin}/auth/login`
-      
       const userData = {
         name: formData.name,
+        full_name: formData.name,
         phone: formData.phone,
         role: formData.role,
         privacy_policy_accepted: formData.privacy_policy_accepted,
@@ -141,7 +163,7 @@ const Register = () => {
         }),
       }
 
-      const { error } = await signUp(formData.email, formData.password, userData)
+      const { error } = await signUp(formData.email, formData.password, userData, captchaToken)
       
       if (error) {
         toast({
@@ -149,6 +171,8 @@ const Register = () => {
           description: error.message,
           variant: 'destructive',
         })
+        hcaptchaRef.current?.reset()
+        setCaptchaToken(null)
       } else {
         toast({
           title: 'Account created successfully!',
@@ -163,6 +187,8 @@ const Register = () => {
         description: error instanceof Error ? error.message : 'Please try again',
         variant: 'destructive',
       })
+      hcaptchaRef.current?.reset()
+      setCaptchaToken(null)
     } finally {
       setLoading(false)
     }
@@ -178,7 +204,7 @@ const Register = () => {
     return undefined
   }
 
-  const isFormValid = formData.privacy_policy_accepted && formData.return_policy_accepted
+  const isFormValid = formData.privacy_policy_accepted && formData.return_policy_accepted && captchaToken
 
   return (
     <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center p-4">
@@ -418,6 +444,20 @@ const Register = () => {
                     </button>
                   </ReturnPolicyDialog>
                 </div>
+              </div>
+            </div>
+
+            {/* hCaptcha */}
+            <div className="border-t pt-4">
+              <Label>Security Verification</Label>
+              <div className="mt-2">
+                <HCaptcha
+                  ref={hcaptchaRef}
+                  siteKey={HCAPTCHA_SITE_KEY}
+                  onVerify={handleCaptchaVerify}
+                  onError={handleCaptchaError}
+                  onExpire={() => setCaptchaToken(null)}
+                />
               </div>
             </div>
 

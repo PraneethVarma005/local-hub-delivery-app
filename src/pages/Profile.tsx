@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,18 +9,32 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { User, MapPin, Phone, Mail } from 'lucide-react'
 import LeafletMap from '@/components/LeafletMap'
+import { supabase } from '@/lib/supabase'
 
 const Profile = () => {
   const { user, userRole } = useAuth()
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [profileData, setProfileData] = useState({
-    full_name: user?.user_metadata?.full_name || '',
+    full_name: user?.user_metadata?.full_name || user?.user_metadata?.name || '',
     phone: user?.user_metadata?.phone || '',
     address: user?.user_metadata?.address || '',
     latitude: user?.user_metadata?.latitude || 0,
     longitude: user?.user_metadata?.longitude || 0
   })
+
+  useEffect(() => {
+    if (user?.user_metadata) {
+      setProfileData({
+        full_name: user.user_metadata.full_name || user.user_metadata.name || '',
+        phone: user.user_metadata.phone || '',
+        address: user.user_metadata.address || '',
+        latitude: user.user_metadata.latitude || 0,
+        longitude: user.user_metadata.longitude || 0
+      })
+    }
+  }, [user])
 
   const handleLocationSelect = (lat: number, lng: number, address: string) => {
     setProfileData(prev => ({
@@ -32,25 +46,64 @@ const Profile = () => {
   }
 
   const handleSave = async () => {
+    if (!user) return
+
+    setLoading(true)
     try {
-      // Here you would typically update the profile in Supabase
+      // Update the user's metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          ...user.user_metadata,
+          full_name: profileData.full_name,
+          phone: profileData.phone,
+          address: profileData.address,
+          latitude: profileData.latitude,
+          longitude: profileData.longitude
+        }
+      })
+
+      if (authError) {
+        throw authError
+      }
+
+      // Also update the user_profiles table if it exists
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: profileData.full_name,
+          phone: profileData.phone,
+          address: profileData.address,
+          latitude: profileData.latitude,
+          longitude: profileData.longitude,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+
+      // Don't throw error if profile doesn't exist, just log it
+      if (profileError) {
+        console.warn('Profile update warning:', profileError)
+      }
+
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully.",
       })
       setIsEditing(false)
     } catch (error) {
+      console.error('Profile update error:', error)
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
         variant: "destructive"
       })
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleCancel = () => {
     setProfileData({
-      full_name: user?.user_metadata?.full_name || '',
+      full_name: user?.user_metadata?.full_name || user?.user_metadata?.name || '',
       phone: user?.user_metadata?.phone || '',
       address: user?.user_metadata?.address || '',
       latitude: user?.user_metadata?.latitude || 0,
@@ -130,6 +183,7 @@ const Profile = () => {
                   <Button 
                     onClick={() => setIsEditing(true)}
                     className="bg-[#16A085] hover:bg-[#16A085]/90"
+                    disabled={loading}
                   >
                     Edit Profile
                   </Button>
@@ -138,12 +192,14 @@ const Profile = () => {
                     <Button 
                       onClick={handleSave}
                       className="bg-[#16A085] hover:bg-[#16A085]/90"
+                      disabled={loading}
                     >
-                      Save Changes
+                      {loading ? 'Saving...' : 'Save Changes'}
                     </Button>
                     <Button 
                       onClick={handleCancel}
                       variant="outline"
+                      disabled={loading}
                     >
                       Cancel
                     </Button>
