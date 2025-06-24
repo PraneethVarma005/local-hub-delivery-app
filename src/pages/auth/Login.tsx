@@ -12,27 +12,27 @@ const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn, user, profile, loading: authLoading } = useAuth()
+  const { signIn, user, userRole, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
 
-  // Handle redirection when user and profile are available
+  // Handle redirection when user is authenticated
   useEffect(() => {
-    if (!authLoading && user && profile) {
-      console.log('User authenticated with profile, redirecting based on role:', profile.role)
+    if (!authLoading && user) {
+      console.log('User authenticated, redirecting based on role:', userRole)
       
       let dashboardPath = '/customer/dashboard'
       
-      if (profile.role === 'shop_owner') {
+      if (userRole === 'shop_owner') {
         dashboardPath = '/shop/dashboard'
-      } else if (profile.role === 'delivery_partner') {
+      } else if (userRole === 'delivery_partner') {
         dashboardPath = '/delivery/dashboard'
       }
       
       console.log('Redirecting to:', dashboardPath)
       navigate(dashboardPath, { replace: true })
     }
-  }, [user, profile, authLoading, navigate])
+  }, [user, userRole, authLoading, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,7 +63,7 @@ const Login = () => {
           title: 'Welcome back!',
           description: 'You have successfully logged in.',
         })
-        // Navigation will be handled by useEffect once profile is loaded
+        // Navigation will be handled by useEffect
       }
     } catch (error) {
       console.error('Login exception:', error)

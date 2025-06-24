@@ -4,8 +4,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
-import { useLanguage } from '@/hooks/useLanguage'
-import LanguageSelector from '@/components/LanguageSelector'
 import { 
   Home, 
   Store, 
@@ -22,7 +20,6 @@ const Navigation = () => {
   const { user, signOut, userRole } = useAuth()
   const location = useLocation()
   const { requestPermission, subscribeToNotifications, permission } = usePushNotifications()
-  const { t } = useLanguage()
 
   useEffect(() => {
     if (user && permission !== 'granted') {
@@ -44,18 +41,18 @@ const Navigation = () => {
     switch (userRole) {
       case 'customer':
         return [
-          { path: '/customer/dashboard', label: t('dashboard'), icon: Home },
-          { path: '/customer/shops', label: t('shops'), icon: Store },
-          { path: '/customer/orders', label: t('orders'), icon: ShoppingBag },
+          { path: '/customer/dashboard', label: 'Dashboard', icon: Home },
+          { path: '/customer/shops', label: 'Shops', icon: Store },
+          { path: '/customer/orders', label: 'Orders', icon: ShoppingBag },
           { path: '/customer/favorites', label: 'Favorites', icon: Heart },
         ]
       case 'shop_owner':
         return [
-          { path: '/shop/dashboard', label: t('dashboard'), icon: Home },
+          { path: '/shop/dashboard', label: 'Dashboard', icon: Home },
         ]
       case 'delivery_partner':
         return [
-          { path: '/delivery/dashboard', label: t('dashboard'), icon: Home },
+          { path: '/delivery/dashboard', label: 'Dashboard', icon: Home },
         ]
       default:
         return []
@@ -107,8 +104,6 @@ const Navigation = () => {
 
           {/* Right Side Items */}
           <div className="flex items-center space-x-3">
-            {!user && <LanguageSelector />}
-            
             {user && (
               <>
                 <Button
@@ -119,13 +114,6 @@ const Navigation = () => {
                 >
                   <Bell className="h-4 w-4" />
                 </Button>
-                
-                <Link to="/profile">
-                  <Button variant="ghost" size="sm">
-                    <User className="w-4 h-4 mr-1" />
-                    {t('profile')}
-                  </Button>
-                </Link>
                 
                 <Button variant="ghost" size="sm" onClick={signOut}>
                   <LogOut className="w-4 h-4 mr-1" />
@@ -138,12 +126,12 @@ const Navigation = () => {
               <div className="flex items-center space-x-2">
                 <Link to="/auth/login">
                   <Button variant="ghost" size="sm">
-                    {t('login')}
+                    Login
                   </Button>
                 </Link>
                 <Link to="/auth/register">
                   <Button size="sm" className="bg-[#16A085] hover:bg-[#16A085]/90">
-                    {t('register')}
+                    Register
                   </Button>
                 </Link>
               </div>

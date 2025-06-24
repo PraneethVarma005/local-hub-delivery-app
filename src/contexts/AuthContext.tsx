@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase'
 interface AuthContextType {
   user: User | null
   session: Session | null
-  profile: any | null
   loading: boolean
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
@@ -27,30 +26,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
-
-  const fetchProfile = async (userId: string) => {
-    try {
-      console.log('Fetching profile for user:', userId)
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (error) {
-        console.error('Error fetching profile:', error)
-        return null
-      }
-
-      console.log('Profile fetched successfully:', data)
-      return data
-    } catch (error) {
-      console.error('Exception in fetchProfile:', error)
-      return null
-    }
-  }
 
   useEffect(() => {
     let mounted = true
@@ -66,14 +42,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session)
         setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          const userProfile = await fetchProfile(session.user.id)
-          if (mounted) {
-            setProfile(userProfile)
-          }
-        }
-        
         setLoading(false)
       } catch (error) {
         console.error('Error getting initial session:', error)
@@ -92,15 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session)
         setUser(session?.user ?? null)
-        
-        if (session?.user && event === 'SIGNED_IN') {
-          // Fetch profile after successful sign in
-          const userProfile = await fetchProfile(session.user.id)
-          setProfile(userProfile)
-        } else if (event === 'SIGNED_OUT') {
-          setProfile(null)
-        }
-        
         setLoading(false)
       }
     )
@@ -170,23 +129,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
+  // Get user role from user metadata instead of profile table
+  const getUserRole = () => {
+    if (!user?.user_metadata) return 'customer'
+    return user.user_metadata.role || 'customer'
+  }
+
   const value = {
     user,
     session,
-    profile,
     loading,
     signUp,
     signIn,
     signOut,
-    userRole: profile?.role || null
+    userRole: getUserRole()
   }
 
   console.log('Auth state:', {
     hasUser: !!user,
     hasSession: !!session,
-    hasProfile: !!profile,
     loading,
-    role: profile?.role
+    role: getUserRole()
   })
 
   return (
