@@ -11,15 +11,15 @@ import { User, MapPin, Phone, Mail } from 'lucide-react'
 import LeafletMap from '@/components/LeafletMap'
 
 const Profile = () => {
-  const { profile, user } = useAuth()
+  const { user, userRole } = useAuth()
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [profileData, setProfileData] = useState({
-    full_name: profile?.full_name || '',
-    phone: profile?.phone || '',
-    address: profile?.address || '',
-    latitude: profile?.latitude || 0,
-    longitude: profile?.longitude || 0
+    full_name: user?.user_metadata?.full_name || '',
+    phone: user?.user_metadata?.phone || '',
+    address: user?.user_metadata?.address || '',
+    latitude: user?.user_metadata?.latitude || 0,
+    longitude: user?.user_metadata?.longitude || 0
   })
 
   const handleLocationSelect = (lat: number, lng: number, address: string) => {
@@ -50,11 +50,11 @@ const Profile = () => {
 
   const handleCancel = () => {
     setProfileData({
-      full_name: profile?.full_name || '',
-      phone: profile?.phone || '',
-      address: profile?.address || '',
-      latitude: profile?.latitude || 0,
-      longitude: profile?.longitude || 0
+      full_name: user?.user_metadata?.full_name || '',
+      phone: user?.user_metadata?.phone || '',
+      address: user?.user_metadata?.address || '',
+      latitude: user?.user_metadata?.latitude || 0,
+      longitude: user?.user_metadata?.longitude || 0
     })
     setIsEditing(false)
   }
@@ -120,7 +120,7 @@ const Profile = () => {
                 <Label htmlFor="role">Role</Label>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#16A085] text-white">
-                    {profile?.role?.replace('_', ' ').toUpperCase()}
+                    {userRole?.replace('_', ' ').toUpperCase()}
                   </span>
                 </div>
               </div>

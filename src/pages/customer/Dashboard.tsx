@@ -7,14 +7,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ShoppingCart, MapPin, Package, User, Heart, Star, Bell } from 'lucide-react'
 
 const CustomerDashboard = () => {
-  const { profile } = useAuth()
+  const { user } = useAuth()
 
   return (
     <div className="min-h-screen bg-[#F7F9F9] p-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#2C3E50] mb-2">
-            Welcome back, {profile?.full_name || 'Customer'}!
+            Welcome back, {user?.user_metadata?.full_name || 'Customer'}!
           </h1>
           <p className="text-gray-600">What would you like to do today?</p>
         </div>
