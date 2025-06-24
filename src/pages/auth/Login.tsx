@@ -12,22 +12,27 @@ const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn, user, profile } = useAuth()
+  const { signIn, user, profile, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
 
-  // Redirect authenticated users to appropriate dashboard
+  // Handle redirection when user and profile are available
   useEffect(() => {
-    if (user && profile) {
-      console.log('User authenticated, redirecting based on role:', profile.role)
+    if (!authLoading && user && profile) {
+      console.log('User authenticated with profile, redirecting based on role:', profile.role)
       
-      const dashboardPath = profile.role === 'customer' ? '/customer/dashboard' 
-        : profile.role === 'shop_owner' ? '/shop/dashboard' 
-        : '/delivery/dashboard'
+      let dashboardPath = '/customer/dashboard'
       
+      if (profile.role === 'shop_owner') {
+        dashboardPath = '/shop/dashboard'
+      } else if (profile.role === 'delivery_partner') {
+        dashboardPath = '/delivery/dashboard'
+      }
+      
+      console.log('Redirecting to:', dashboardPath)
       navigate(dashboardPath, { replace: true })
     }
-  }, [user, profile, navigate])
+  }, [user, profile, authLoading, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +75,18 @@ const Login = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#16A085] mx-auto"></div>
+          <p className="mt-2 text-gray-600 text-sm">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -119,7 +119,7 @@ const PrivacyPolicyDialog: React.FC<PrivacyPolicyDialogProps> = ({ userType, chi
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] z-[100] fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]">
+      <DialogContent className="max-w-2xl max-h-[80vh] z-[9999] fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] bg-white">
         <DialogHeader>
           <DialogTitle>{policy.title}</DialogTitle>
         </DialogHeader>

@@ -122,7 +122,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   return (
     <div 
       ref={mapRef} 
-      style={{ height, width: '100%' }}
+      style={{ height, width: '100%', zIndex: 1 }}
       className="rounded-lg border"
     />
   )
