@@ -10,10 +10,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import CurrentLocationButton from '@/components/CurrentLocationButton'
 import LeafletMap from '@/components/LeafletMap'
-import LanguageSelector from '@/components/LanguageSelector'
 import PrivacyPolicyDialog from '@/components/PrivacyPolicyDialog'
 import ReturnPolicyDialog from '@/components/ReturnPolicyDialog'
-import { useLanguage } from '@/hooks/useLanguage'
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -42,7 +40,6 @@ const Register = () => {
   const { signUp } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const { t } = useLanguage()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({
@@ -181,23 +178,21 @@ const Register = () => {
     return undefined
   }
 
+  const isFormValid = formData.privacy_policy_accepted && formData.return_policy_accepted
+
   return (
     <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex-1"></div>
-            <CardTitle className="text-2xl font-bold text-[#2C3E50]">
-              {t('register')} - LocalHub
-            </CardTitle>
-            <LanguageSelector />
-          </div>
+          <CardTitle className="text-2xl font-bold text-[#2C3E50]">
+            Register - LocalHub
+          </CardTitle>
           <p className="text-gray-600">Create your account</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="role">{t('iAmA')}</Label>
+              <Label htmlFor="role">I am a</Label>
               <select
                 id="role"
                 name="role"
@@ -205,15 +200,15 @@ const Register = () => {
                 onChange={handleInputChange}
                 className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
               >
-                <option value="customer">{t('customer')}</option>
-                <option value="shop_owner">{t('shopOwner')}</option>
-                <option value="delivery_partner">{t('deliveryPartner')}</option>
+                <option value="customer">Customer</option>
+                <option value="shop_owner">Shop Owner</option>
+                <option value="delivery_partner">Delivery Partner</option>
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">{t('fullName')}</Label>
+                <Label htmlFor="name">Full Name</Label>
                 <Input
                   id="name"
                   name="name"
@@ -221,11 +216,11 @@ const Register = () => {
                   onChange={handleInputChange}
                   required
                   className="mt-1"
-                  placeholder={`Enter your ${t('fullName').toLowerCase()}`}
+                  placeholder="Enter your full name"
                 />
               </div>
               <div>
-                <Label htmlFor="phone">{t('phone')}</Label>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -233,13 +228,13 @@ const Register = () => {
                   onChange={handleInputChange}
                   required
                   className="mt-1"
-                  placeholder={`Enter your ${t('phone').toLowerCase()}`}
+                  placeholder="Enter your phone"
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="email">{t('email')}</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 name="email"
@@ -248,13 +243,13 @@ const Register = () => {
                 onChange={handleInputChange}
                 required
                 className="mt-1"
-                placeholder={`Enter your ${t('email').toLowerCase()}`}
+                placeholder="Enter your email"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="password">{t('password')}</Label>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   name="password"
@@ -267,7 +262,7 @@ const Register = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -284,7 +279,7 @@ const Register = () => {
             {formData.role === 'shop_owner' && (
               <>
                 <div>
-                  <Label htmlFor="shop_name">{t('shopName')}</Label>
+                  <Label htmlFor="shop_name">Shop Name</Label>
                   <Input
                     id="shop_name"
                     name="shop_name"
@@ -292,11 +287,11 @@ const Register = () => {
                     onChange={handleInputChange}
                     required
                     className="mt-1"
-                    placeholder={`Enter your ${t('shopName').toLowerCase()}`}
+                    placeholder="Enter your shop name"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="shop_category">{t('shopCategory')}</Label>
+                  <Label htmlFor="shop_category">Shop Category</Label>
                   <select
                     id="shop_category"
                     name="shop_category"
@@ -304,13 +299,13 @@ const Register = () => {
                     onChange={handleInputChange}
                     className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
                   >
-                    <option value="food">{t('food')}</option>
-                    <option value="groceries">{t('groceries')}</option>
-                    <option value="medicine">{t('medicine')}</option>
+                    <option value="food">Food</option>
+                    <option value="groceries">Groceries</option>
+                    <option value="medicine">Medicine</option>
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="shop_address">{t('shopAddress')}</Label>
+                  <Label htmlFor="shop_address">Shop Address</Label>
                   <Input
                     id="shop_address"
                     name="shop_address"
@@ -318,11 +313,11 @@ const Register = () => {
                     onChange={handleInputChange}
                     required
                     className="mt-1"
-                    placeholder={`Enter your ${t('shopAddress').toLowerCase()}`}
+                    placeholder="Enter your shop address"
                   />
                 </div>
                 <div>
-                  <Label>{t('shopLocation')}</Label>
+                  <Label>Shop Location</Label>
                   <div className="mt-2 space-y-2">
                     <CurrentLocationButton onLocationSelect={handleLocationSelect} />
                     <LeafletMap
@@ -339,7 +334,7 @@ const Register = () => {
             {formData.role === 'delivery_partner' && (
               <>
                 <div>
-                  <Label htmlFor="vehicle_type">{t('vehicleType')}</Label>
+                  <Label htmlFor="vehicle_type">Vehicle Type</Label>
                   <select
                     id="vehicle_type"
                     name="vehicle_type"
@@ -347,14 +342,14 @@ const Register = () => {
                     onChange={handleInputChange}
                     className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#16A085] focus:border-transparent"
                   >
-                    <option value="bicycle">{t('bicycle')}</option>
-                    <option value="motorcycle">{t('motorcycle')}</option>
-                    <option value="car">{t('car')}</option>
-                    <option value="scooter">{t('scooter')}</option>
+                    <option value="bicycle">Bicycle</option>
+                    <option value="motorcycle">Motorcycle</option>
+                    <option value="car">Car</option>
+                    <option value="scooter">Electric Scooter</option>
                   </select>
                 </div>
                 <div>
-                  <Label>{t('yourLocation')}</Label>
+                  <Label>Your Location</Label>
                   <div className="mt-2 space-y-2">
                     <CurrentLocationButton onLocationSelect={handleLocationSelect} />
                     <LeafletMap
@@ -370,7 +365,7 @@ const Register = () => {
 
             {formData.role === 'customer' && (
               <div>
-                <Label>{t('yourLocation')} (Optional)</Label>
+                <Label>Your Location (Optional)</Label>
                 <div className="mt-2 space-y-2">
                   <CurrentLocationButton onLocationSelect={handleLocationSelect} />
                   <LeafletMap
@@ -392,13 +387,14 @@ const Register = () => {
                   onCheckedChange={(checked) => handleCheckboxChange('privacy_policy_accepted', checked as boolean)}
                 />
                 <div className="text-sm">
-                  <span>I agree to the </span>
+                  <span className="text-red-500">*</span>
+                  <span> I agree to the </span>
                   <PrivacyPolicyDialog userType={formData.role as 'customer' | 'shop_owner' | 'delivery_partner'}>
                     <button
                       type="button"
                       className="text-[#16A085] hover:underline font-medium"
                     >
-                      {t('privacyPolicy')}
+                      Privacy Policy
                     </button>
                   </PrivacyPolicyDialog>
                 </div>
@@ -411,13 +407,14 @@ const Register = () => {
                   onCheckedChange={(checked) => handleCheckboxChange('return_policy_accepted', checked as boolean)}
                 />
                 <div className="text-sm">
-                  <span>I agree to the </span>
+                  <span className="text-red-500">*</span>
+                  <span> I agree to the </span>
                   <ReturnPolicyDialog userType={formData.role as 'customer' | 'shop_owner' | 'delivery_partner'}>
                     <button
                       type="button"
                       className="text-[#16A085] hover:underline font-medium"
                     >
-                      {t('returnPolicy')}
+                      Return Policy
                     </button>
                   </ReturnPolicyDialog>
                 </div>
@@ -426,21 +423,21 @@ const Register = () => {
 
             <Button
               type="submit"
-              disabled={loading}
-              className="w-full bg-[#16A085] hover:bg-[#16A085]/90"
+              disabled={loading || !isFormValid}
+              className={`w-full ${!isFormValid ? 'cursor-not-allowed opacity-50' : 'bg-[#16A085] hover:bg-[#16A085]/90'}`}
             >
-              {loading ? 'Creating account...' : t('createAccount')}
+              {loading ? 'Creating account...' : 'Create Account'}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              {t('alreadyHaveAccount')}{' '}
+              Already have an account?{' '}
               <Link
                 to="/auth/login"
                 className="text-[#16A085] hover:underline font-medium"
               >
-                {t('signInHere')}
+                Sign in here
               </Link>
             </p>
           </div>

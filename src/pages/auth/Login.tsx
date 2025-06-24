@@ -7,8 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import LanguageSelector from '@/components/LanguageSelector'
-import { useLanguage } from '@/hooks/useLanguage'
 
 const Login = () => {
   const [email, setEmail] = useState('')
@@ -17,7 +15,6 @@ const Login = () => {
   const { signIn, user, profile } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const { t } = useLanguage()
 
   // Redirect authenticated users to appropriate dashboard
   useEffect(() => {
@@ -79,19 +76,15 @@ const Login = () => {
     <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex-1"></div>
-            <CardTitle className="text-2xl font-bold text-[#2C3E50]">
-              {t('welcomeBack')}
-            </CardTitle>
-            <LanguageSelector />
-          </div>
-          <p className="text-gray-600">{t('signInToAccount')}</p>
+          <CardTitle className="text-2xl font-bold text-[#2C3E50]">
+            Welcome Back
+          </CardTitle>
+          <p className="text-gray-600">Sign in to your LocalHub account</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="email">{t('email')}</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -99,13 +92,13 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="mt-1"
-                placeholder={`Enter your ${t('email').toLowerCase()}`}
+                placeholder="Enter your email"
                 autoComplete="email"
               />
             </div>
 
             <div>
-              <Label htmlFor="password">{t('password')}</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -113,7 +106,7 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="mt-1"
-                placeholder={`Enter your ${t('password').toLowerCase()}`}
+                placeholder="Enter your password"
                 autoComplete="current-password"
               />
             </div>
@@ -123,18 +116,18 @@ const Login = () => {
               disabled={loading}
               className="w-full bg-[#16A085] hover:bg-[#16A085]/90"
             >
-              {loading ? 'Signing in...' : t('signIn')}
+              {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              {t('dontHaveAccount')}{' '}
+              Don't have an account?{' '}
               <Link
                 to="/auth/register"
                 className="text-[#16A085] hover:underline font-medium"
               >
-                {t('signUpHere')}
+                Sign up here
               </Link>
             </p>
           </div>

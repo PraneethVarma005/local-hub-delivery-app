@@ -122,7 +122,7 @@ const ReturnPolicyDialog: React.FC<ReturnPolicyDialogProps> = ({ userType, child
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent className="max-w-2xl max-h-[80vh] z-[100] fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]">
         <DialogHeader>
           <DialogTitle>{policy.title}</DialogTitle>
         </DialogHeader>
