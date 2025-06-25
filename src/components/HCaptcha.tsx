@@ -39,14 +39,19 @@ const HCaptcha = forwardRef<HCaptchaRef, HCaptchaProps>(({ siteKey, onVerify, on
   React.useEffect(() => {
     const loadHCaptcha = () => {
       if (window.hcaptcha && hcaptchaRef.current) {
-        widgetId.current = window.hcaptcha.render(hcaptchaRef.current, {
-          sitekey: siteKey,
-          callback: onVerify,
-          'error-callback': onError,
-          'expired-callback': onExpire,
-          size: 'normal',
-          theme: 'light'
-        })
+        try {
+          widgetId.current = window.hcaptcha.render(hcaptchaRef.current, {
+            sitekey: siteKey,
+            callback: onVerify,
+            'error-callback': onError,
+            'expired-callback': onExpire,
+            size: 'normal',
+            theme: 'light'
+          })
+        } catch (error) {
+          console.error('Error rendering hCaptcha:', error)
+          if (onError) onError()
+        }
       }
     }
 
@@ -58,12 +63,20 @@ const HCaptcha = forwardRef<HCaptchaRef, HCaptchaProps>(({ siteKey, onVerify, on
       script.async = true
       script.defer = true
       script.onload = loadHCaptcha
+      script.onerror = () => {
+        console.error('Failed to load hCaptcha script')
+        if (onError) onError()
+      }
       document.head.appendChild(script)
     }
 
     return () => {
       if (widgetId.current && window.hcaptcha) {
-        window.hcaptcha.remove(widgetId.current)
+        try {
+          window.hcaptcha.remove(widgetId.current)
+        } catch (error) {
+          console.error('Error removing hCaptcha widget:', error)
+        }
       }
     }
   }, [siteKey, onVerify, onError, onExpire])
