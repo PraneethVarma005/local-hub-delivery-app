@@ -7,8 +7,8 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signUp: (email: string, password: string, userData: any, captchaToken?: string) => Promise<{ error: any }>
-  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: any }>
+  signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>
+  signIn: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
   userRole: string | null
 }
@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [])
 
-  const signUp = async (email: string, password: string, userData: any, captchaToken?: string) => {
+  const signUp = async (email: string, password: string, userData: any) => {
     try {
       console.log('SignUp attempt for:', email)
       
@@ -83,10 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailRedirectTo: redirectUrl,
           data: userData
         }
-      }
-
-      if (captchaToken) {
-        signUpOptions.options.captchaToken = captchaToken
       }
 
       const { data, error } = await supabase.auth.signUp(signUpOptions)
@@ -104,22 +100,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const signIn = async (email: string, password: string, captchaToken?: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
       console.log('SignIn attempt for:', email)
       
-      const signInOptions: any = {
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
-      }
-
-      if (captchaToken) {
-        signInOptions.options = {
-          captchaToken: captchaToken
-        }
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword(signInOptions)
+      })
 
       if (error) {
         console.error('SignIn error:', error)

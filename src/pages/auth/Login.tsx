@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,19 +7,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import HCaptcha, { HCaptchaRef } from '@/components/HCaptcha'
-
-const HCAPTCHA_SITE_KEY = '10000000-ffff-ffff-ffff-000000000001' // Test site key, replace with your actual site key
 
 const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const { signIn, user, userRole, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const hcaptchaRef = useRef<HCaptchaRef>(null)
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -38,19 +33,6 @@ const Login = () => {
     }
   }, [user, userRole, authLoading, navigate])
 
-  const handleCaptchaVerify = (token: string) => {
-    setCaptchaToken(token)
-  }
-
-  const handleCaptchaError = () => {
-    setCaptchaToken(null)
-    toast({
-      title: 'Captcha Error',
-      description: 'Please try the captcha again',
-      variant: 'destructive',
-    })
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -63,19 +45,10 @@ const Login = () => {
       return
     }
 
-    if (!captchaToken) {
-      toast({
-        title: 'Captcha Required',
-        description: 'Please complete the captcha verification',
-        variant: 'destructive',
-      })
-      return
-    }
-
     setLoading(true)
 
     try {
-      const { error } = await signIn(email, password, captchaToken)
+      const { error } = await signIn(email, password)
       
       if (error) {
         console.error('Login error:', error)
@@ -84,8 +57,6 @@ const Login = () => {
           description: error.message || 'Please check your credentials',
           variant: 'destructive',
         })
-        hcaptchaRef.current?.reset()
-        setCaptchaToken(null)
       } else {
         toast({
           title: 'Welcome back!',
@@ -99,8 +70,6 @@ const Login = () => {
         description: 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       })
-      hcaptchaRef.current?.reset()
-      setCaptchaToken(null)
     } finally {
       setLoading(false)
     }
@@ -156,23 +125,10 @@ const Login = () => {
               />
             </div>
 
-            <div>
-              <Label>Security Verification</Label>
-              <div className="mt-2">
-                <HCaptcha
-                  ref={hcaptchaRef}
-                  siteKey={HCAPTCHA_SITE_KEY}
-                  onVerify={handleCaptchaVerify}
-                  onError={handleCaptchaError}
-                  onExpire={() => setCaptchaToken(null)}
-                />
-              </div>
-            </div>
-
             <Button
               type="submit"
-              disabled={loading || !captchaToken}
-              className={`w-full ${!captchaToken ? 'cursor-not-allowed opacity-50' :  'bg-[#16A085] hover:bg-[#16A085]/90'}`}
+              disabled={loading}
+              className="w-full bg-[#16A085] hover:bg-[#16A085]/90"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
