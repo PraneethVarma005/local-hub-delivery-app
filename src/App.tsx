@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,6 +23,7 @@ import ShopDetail from "./pages/customer/ShopDetail";
 import Checkout from "./pages/customer/Checkout";
 import Orders from "./pages/customer/Orders";
 import Favorites from "./pages/customer/Favorites";
+import AIChatPage from "./pages/AIChat";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +53,7 @@ const App = () => (
                     <Route path="/auth/register" element={<Register />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/ai-chat" element={<AIChatPage />} />
                     
                     {/* Customer Routes */}
                     <Route path="/customer/dashboard" element={
