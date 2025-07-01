@@ -14,7 +14,7 @@ const CustomerDashboard = () => {
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#2C3E50] mb-2">
-            Welcome back, {user?.user_metadata?.full_name || 'Customer'}!
+            Welcome back, {user?.user_metadata?.full_name || user?.user_metadata?.name || 'Customer'}!
           </h1>
           <p className="text-gray-600">What would you like to do today?</p>
         </div>
@@ -85,29 +85,29 @@ const CustomerDashboard = () => {
           </Link>
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - Empty counts as requested */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-[#16A085] mb-1">12</div>
+              <div className="text-2xl font-bold text-[#16A085] mb-1">0</div>
               <div className="text-sm text-gray-600">Total Orders</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-[#16A085] mb-1">5</div>
+              <div className="text-2xl font-bold text-[#16A085] mb-1">0</div>
               <div className="text-sm text-gray-600">Favorite Shops</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-[#16A085] mb-1">₹2,450</div>
+              <div className="text-2xl font-bold text-[#16A085] mb-1">₹0</div>
               <div className="text-sm text-gray-600">Total Spent</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activity - Empty as requested */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="text-[#2C3E50] flex items-center gap-2">
@@ -116,31 +116,11 @@ const CustomerDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                <Package className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="font-medium text-green-800">Order Delivered</p>
-                  <p className="text-sm text-green-600">Your order from Fresh Mart Grocery has been delivered</p>
-                </div>
-                <span className="text-xs text-green-500 ml-auto">2 hours ago</span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                <Heart className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="font-medium text-blue-800">New Favorite Added</p>
-                  <p className="text-sm text-blue-600">You added Spice Kitchen to your favorites</p>
-                </div>
-                <span className="text-xs text-blue-500 ml-auto">1 day ago</span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-                <Star className="w-5 h-5 text-orange-600" />
-                <div>
-                  <p className="font-medium text-orange-800">Review Submitted</p>
-                  <p className="text-sm text-orange-600">You rated Pizza Corner 5 stars</p>
-                </div>
-                <span className="text-xs text-orange-500 ml-auto">3 days ago</span>
-              </div>
+            <div className="text-center py-8">
+              <p className="text-gray-500">No recent activity</p>
+              <p className="text-sm text-gray-400 mt-2">
+                Start browsing shops to see your activity here
+              </p>
             </div>
           </CardContent>
         </Card>

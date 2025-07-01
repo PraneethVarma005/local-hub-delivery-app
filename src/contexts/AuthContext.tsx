@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
+  signInWithGoogle: (role: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
   userRole: string | null
 }
@@ -59,6 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
+
+        // Handle Google OAuth user creation
+        if (event === 'SIGNED_IN' && session?.user && !session.user.user_metadata.role) {
+          console.log('Google OAuth user detected, needs role assignment')
+        }
       }
     )
 
@@ -122,6 +128,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
+  const signInWithGoogle = async (role: string) => {
+    try {
+      console.log('Google SignIn attempt with role:', role)
+      
+      const redirectUrl = `${window.location.origin}/auth/callback`
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            role: role
+          }
+        }
+      })
+
+      if (error) {
+        console.error('Google SignIn error:', error)
+        return { error }
+      }
+
+      console.log('Google SignIn initiated successfully')
+      return { error: null }
+    } catch (error) {
+      console.error('Google SignIn exception:', error)
+      return { error }
+    }
+  }
+
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut()
@@ -144,6 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     userRole: getUserRole()
   }

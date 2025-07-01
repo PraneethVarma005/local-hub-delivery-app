@@ -11,8 +11,8 @@ export interface Shop {
   full_name: string
   phone: string
   email: string
-  average_rating: number
-  total_ratings: number
+  average_rating?: number
+  total_ratings?: number
   is_online: boolean
   created_at: string
 }
@@ -39,6 +39,8 @@ export interface Order {
 export const shopService = {
   async getShops(category?: string) {
     try {
+      console.log('Fetching shops with category:', category)
+      
       let query = supabase
         .from('user_profiles')
         .select('*')
@@ -53,18 +55,21 @@ export const shopService = {
 
       if (error) {
         console.error('Error fetching shops:', error)
-        throw error
+        return []
       }
 
+      console.log('Shops fetched successfully:', data?.length || 0)
       return data || []
     } catch (error) {
-      console.error('Error in getShops:', error)
-      throw error
+      console.error('Exception in getShops:', error)
+      return []
     }
   },
 
   async getShopById(id: string) {
     try {
+      console.log('Fetching shop by ID:', id)
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -73,21 +78,22 @@ export const shopService = {
         .single()
 
       if (error) {
-        console.error('Error fetching shop:', error)
-        throw error
+        console.error('Error fetching shop by ID:', error)
+        return null
       }
 
+      console.log('Shop fetched by ID successfully')
       return data
     } catch (error) {
-      console.error('Error in getShopById:', error)
-      throw error
+      console.error('Exception in getShopById:', error)
+      return null
     }
   },
 
   async getNearbyShops(lat: number, lng: number, radiusKm: number = 10) {
     try {
-      // Using a simple distance calculation
-      // In production, you might want to use PostGIS for more accurate results
+      console.log('Fetching nearby shops for location:', { lat, lng, radiusKm })
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -97,25 +103,28 @@ export const shopService = {
 
       if (error) {
         console.error('Error fetching nearby shops:', error)
-        throw error
+        return []
       }
 
-      // Filter by distance on the client side for now
+      // Filter by distance on the client side
       const shopsWithDistance = (data || []).map(shop => {
         const distance = calculateDistance(lat, lng, shop.shop_lat, shop.shop_lng)
         return { ...shop, distance }
       }).filter(shop => shop.distance <= radiusKm)
       .sort((a, b) => a.distance - b.distance)
 
+      console.log('Nearby shops found:', shopsWithDistance.length)
       return shopsWithDistance
     } catch (error) {
-      console.error('Error in getNearbyShops:', error)
-      throw error
+      console.error('Exception in getNearbyShops:', error)
+      return []
     }
   },
 
   async getOrders(userId?: string) {
     try {
+      console.log('Fetching orders for user:', userId)
+      
       let query = supabase
         .from('orders')
         .select('*')
@@ -129,18 +138,21 @@ export const shopService = {
 
       if (error) {
         console.error('Error fetching orders:', error)
-        throw error
+        return []
       }
 
+      console.log('Orders fetched successfully:', data?.length || 0)
       return data || []
     } catch (error) {
-      console.error('Error in getOrders:', error)
-      throw error
+      console.error('Exception in getOrders:', error)
+      return []
     }
   },
 
   async createOrder(orderData: Partial<Order>) {
     try {
+      console.log('Creating order:', orderData)
+      
       const { data, error } = await supabase
         .from('orders')
         .insert([orderData])
@@ -152,15 +164,18 @@ export const shopService = {
         throw error
       }
 
+      console.log('Order created successfully:', data.id)
       return data
     } catch (error) {
-      console.error('Error in createOrder:', error)
+      console.error('Exception in createOrder:', error)
       throw error
     }
   },
 
   async updateOrderStatus(orderId: string, status: string) {
     try {
+      console.log('Updating order status:', { orderId, status })
+      
       const { data, error } = await supabase
         .from('orders')
         .update({ status, updated_at: new Date().toISOString() })
@@ -173,9 +188,10 @@ export const shopService = {
         throw error
       }
 
+      console.log('Order status updated successfully')
       return data
     } catch (error) {
-      console.error('Error in updateOrderStatus:', error)
+      console.error('Exception in updateOrderStatus:', error)
       throw error
     }
   }

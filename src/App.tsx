@@ -13,6 +13,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import AuthCallback from "./pages/auth/Callback";
 import Profile from "./pages/Profile";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import ShopDashboard from "./pages/shop/Dashboard";
@@ -29,6 +30,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
     },
   },
 });
@@ -49,6 +51,7 @@ const App = () => (
                     <Route path="/" element={<Home />} />
                     <Route path="/auth/login" element={<Login />} />
                     <Route path="/auth/register" element={<Register />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/profile" element={<Profile />} />
                     
                     {/* Customer Routes */}
