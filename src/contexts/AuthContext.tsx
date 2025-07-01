@@ -61,9 +61,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null)
         setLoading(false)
 
-        // Handle Google OAuth user creation
-        if (event === 'SIGNED_IN' && session?.user && !session.user.user_metadata.role) {
-          console.log('Google OAuth user detected, needs role assignment')
+        // Handle Google OAuth user - check URL params for role
+        if (event === 'SIGNED_IN' && session?.user) {
+          const urlParams = new URLSearchParams(window.location.search)
+          const roleParam = urlParams.get('role')
+          
+          if (roleParam && session.user.app_metadata.provider === 'google') {
+            console.log('Google OAuth user detected with role:', roleParam)
+            
+            // Update user metadata with role
+            try {
+              const { error } = await supabase.auth.updateUser({
+                data: { role: roleParam }
+              })
+              
+              if (error) {
+                console.error('Error updating user role:', error)
+              } else {
+                console.log('User role updated successfully to:', roleParam)
+              }
+            } catch (error) {
+              console.error('Exception updating user role:', error)
+            }
+          }
         }
       }
     )
@@ -132,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Google SignIn attempt with role:', role)
       
-      const redirectUrl = `${window.location.origin}/auth/callback`
+      const redirectUrl = `${window.location.origin}/auth/callback?role=${role}`
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -169,8 +189,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const getUserRole = () => {
-    if (!user?.user_metadata) return 'customer'
-    return user.user_metadata.role || 'customer'
+    if (!user) return 'customer'
+    
+    // Check user_metadata first (for Google OAuth users)
+    if (user.user_metadata?.role) {
+      return user.user_metadata.role
+    }
+    
+    // Check app_metadata as fallback
+    if (user.app_metadata?.role) {
+      return user.app_metadata.role
+    }
+    
+    return 'customer'
   }
 
   const value = {
@@ -188,7 +219,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hasUser: !!user,
     hasSession: !!session,
     loading,
-    role: getUserRole()
+    role: getUserRole(),
+    provider: user?.app_metadata?.provider
   })
 
   return (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +17,7 @@ const ShopDetail = () => {
   const [products, setProducts] = useState<any[]>([])
   const [userRating, setUserRating] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
   const { addToCart, items, updateQuantity, getTotalItems } = useCart()
   const { user } = useAuth()
@@ -26,12 +26,16 @@ const ShopDetail = () => {
     if (shopId) {
       loadShopDetails()
       loadProducts()
-      loadUserRating()
+      if (user) {
+        loadUserRating()
+      }
     }
   }, [shopId, user])
 
   const loadShopDetails = async () => {
     try {
+      console.log('Loading shop details for ID:', shopId)
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -39,20 +43,29 @@ const ShopDetail = () => {
         .eq('role', 'shop_owner')
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error loading shop details:', error)
+        if (error.code === 'PGRST116') {
+          setError('Shop not found')
+        } else {
+          setError('Failed to load shop details')
+        }
+        return
+      }
+
+      console.log('Shop details loaded:', data)
       setShop(data)
     } catch (error) {
-      console.error('Error loading shop details:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load shop details',
-        variant: 'destructive'
-      })
+      console.error('Exception loading shop details:', error)
+      setError('Failed to load shop details')
     }
   }
 
   const loadProducts = async () => {
     try {
+      console.log('Loading products for shop:', shopId)
+      
+      // Check if shop_inventory table exists, if not, use mock data
       const { data, error } = await supabase
         .from('shop_inventory')
         .select('*')
@@ -60,10 +73,17 @@ const ShopDetail = () => {
         .eq('is_available', true)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
-      setProducts(data || [])
+      if (error) {
+        console.error('Error loading products:', error)
+        // If table doesn't exist, set empty products array
+        setProducts([])
+      } else {
+        console.log('Products loaded:', data?.length || 0)
+        setProducts(data || [])
+      }
     } catch (error) {
-      console.error('Error loading products:', error)
+      console.error('Exception loading products:', error)
+      setProducts([])
     } finally {
       setLoading(false)
     }
@@ -78,12 +98,13 @@ const ShopDetail = () => {
         .select('*')
         .eq('shop_id', shopId)
         .eq('customer_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (data) {
         setUserRating(data)
       }
     } catch (error) {
+      console.error('Error loading user rating:', error)
       // User hasn't rated yet, which is fine
     }
   }
@@ -115,16 +136,24 @@ const ShopDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085]"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading shop details...</p>
+        </div>
       </div>
     )
   }
 
-  if (!shop) {
+  if (error || !shop) {
     return (
       <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-[#2C3E50] mb-2">Shop Not Found</h2>
+          <h2 className="text-2xl font-bold text-[#2C3E50] mb-2">
+            {error || 'Shop Not Found'}
+          </h2>
+          <p className="text-gray-600 mb-4">
+            The shop you're looking for doesn't exist or couldn't be loaded.
+          </p>
           <Link to="/customer/shops">
             <Button className="bg-[#16A085] hover:bg-[#16A085]/90">
               Back to Shops
@@ -149,7 +178,9 @@ const ShopDetail = () => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <h1 className="text-3xl font-bold text-[#2C3E50]">{shop.shop_name}</h1>
+                  <h1 className="text-3xl font-bold text-[#2C3E50]">
+                    {shop.shop_name || 'Shop Name'}
+                  </h1>
                   <Badge 
                     className={`${
                       shop.shop_category === 'food' ? 'bg-orange-500' :
@@ -157,14 +188,16 @@ const ShopDetail = () => {
                       'bg-blue-500'
                     } text-white capitalize`}
                   >
-                    {shop.shop_category}
+                    {shop.shop_category || 'general'}
                   </Badge>
                 </div>
-                <p className="text-gray-600 mb-2">Owned by {shop.full_name}</p>
+                <p className="text-gray-600 mb-2">
+                  Owned by {shop.full_name || 'Shop Owner'}
+                </p>
                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-1" />
-                    {shop.shop_address}
+                    {shop.shop_address || 'Address not available'}
                   </div>
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 mr-1" />
@@ -209,6 +242,9 @@ const ShopDetail = () => {
             {products.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">No products available at the moment</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  This shop hasn't added any products yet.
+                </p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-6">
