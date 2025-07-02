@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -19,23 +19,31 @@ const Login = () => {
   const { signIn, signInWithGoogle, user, userRole, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
 
+  // Redirect authenticated users away from login page
   useEffect(() => {
     if (!authLoading && user) {
-      console.log('User authenticated, redirecting based on role:', userRole)
+      console.log('User already authenticated, redirecting based on role:', userRole)
       
-      let dashboardPath = '/customer/dashboard'
-      
-      if (userRole === 'shop_owner') {
-        dashboardPath = '/shop/dashboard'
-      } else if (userRole === 'delivery_partner') {
-        dashboardPath = '/delivery/dashboard'
+      // Check if user was trying to access a specific page
+      const from = location.state?.from?.pathname
+      if (from && from !== '/auth/login' && from !== '/auth/register') {
+        navigate(from, { replace: true })
+        return
       }
+      
+      // Default role-based redirect
+      const dashboardPath = {
+        'shop_owner': '/shop/dashboard',
+        'delivery_partner': '/delivery/dashboard',
+        'customer': '/customer/dashboard'
+      }[userRole] || '/customer/dashboard'
       
       console.log('Redirecting to:', dashboardPath)
       navigate(dashboardPath, { replace: true })
     }
-  }, [user, userRole, authLoading, navigate])
+  }, [user, userRole, authLoading, navigate, location])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -109,11 +117,16 @@ const Login = () => {
     return (
       <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#16A085] mx-auto"></div>
-          <p className="mt-2 text-gray-600 text-sm">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     )
+  }
+
+  // Don't render login form if user is already authenticated
+  if (user) {
+    return null
   }
 
   return (

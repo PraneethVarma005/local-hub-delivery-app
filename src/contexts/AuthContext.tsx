@@ -32,25 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true
 
-    const getInitialSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (!mounted) return
-
-        console.log('Initial session:', session?.user?.email || 'No session')
-        
-        setSession(session)
-        setUser(session?.user ?? null)
-        setLoading(false)
-      } catch (error) {
-        console.error('Error getting initial session:', error)
-        if (mounted) {
-          setLoading(false)
-        }
-      }
-    }
-
+    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
@@ -59,8 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session)
         setUser(session?.user ?? null)
-        setLoading(false)
-
+        
         // Handle Google OAuth user - check URL params for role
         if (event === 'SIGNED_IN' && session?.user) {
           const urlParams = new URLSearchParams(window.location.search)
@@ -69,7 +50,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (roleParam && session.user.app_metadata.provider === 'google') {
             console.log('Google OAuth user detected with role:', roleParam)
             
-            // Update user metadata with role
             try {
               const { error } = await supabase.auth.updateUser({
                 data: { role: roleParam }
@@ -85,8 +65,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         }
+        
+        setLoading(false)
       }
     )
+
+    // Then get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!mounted) return
+
+        console.log('Initial session:', session?.user?.email || 'No session')
+        
+        setSession(session)
+        setUser(session?.user ?? null)
+      } catch (error) {
+        console.error('Error getting initial session:', error)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
 
     getInitialSession()
 
@@ -102,16 +104,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const redirectUrl = `${window.location.origin}/auth/login`
       
-      const signUpOptions: any = {
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: redirectUrl,
           data: userData
         }
-      }
-
-      const { data, error } = await supabase.auth.signUp(signUpOptions)
+      })
 
       if (error) {
         console.error('SignUp error:', error)
@@ -183,6 +183,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('SignOut error:', error)
       }
+      // Clear local state immediately
+      setUser(null)
+      setSession(null)
     } catch (error) {
       console.error('SignOut exception:', error)
     }

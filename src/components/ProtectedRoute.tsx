@@ -1,6 +1,6 @@
 
 import React from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface ProtectedRouteProps {
@@ -10,20 +10,22 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const { user, userRole, loading } = useAuth()
+  const location = useLocation()
 
   console.log('ProtectedRoute check:', {
     hasUser: !!user,
     loading,
     userRole,
-    allowedRoles
+    allowedRoles,
+    currentPath: location.pathname
   })
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#16A085] mx-auto"></div>
-          <p className="mt-2 text-gray-600 text-sm">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     )
@@ -31,19 +33,21 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
 
   if (!user) {
     console.log('ProtectedRoute: No user, redirecting to login')
-    return <Navigate to="/auth/login" replace />
+    return <Navigate to="/auth/login" replace state={{ from: location }} />
   }
 
   if (!allowedRoles.includes(userRole)) {
     console.log('ProtectedRoute: Role not allowed. User role:', userRole, 'Allowed:', allowedRoles)
     
     // Redirect to correct dashboard based on user's actual role
-    const redirectPath = userRole === 'customer' ? '/customer/dashboard' 
-      : userRole === 'shop_owner' ? '/shop/dashboard' 
-      : '/delivery/dashboard'
+    const dashboardPath = {
+      'customer': '/customer/dashboard',
+      'shop_owner': '/shop/dashboard', 
+      'delivery_partner': '/delivery/dashboard'
+    }[userRole] || '/customer/dashboard'
     
-    console.log('Redirecting to:', redirectPath)
-    return <Navigate to={redirectPath} replace />
+    console.log('Redirecting to:', dashboardPath)
+    return <Navigate to={dashboardPath} replace />
   }
 
   console.log('ProtectedRoute: Access granted for role:', userRole)
