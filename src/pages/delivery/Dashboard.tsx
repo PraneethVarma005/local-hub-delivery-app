@@ -3,6 +3,8 @@ import React from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BarChart3, MapPin, MessageSquare } from 'lucide-react'
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
+import DeliveryOrdersManager from '@/components/DeliveryOrdersManager'
+import ChatSystem from '@/components/ChatSystem'
 import { useLanguage } from '@/hooks/useLanguage'
 import LanguageSelector from '@/components/LanguageSelector'
 
@@ -43,15 +45,11 @@ const DeliveryDashboard = () => {
           </TabsContent>
 
           <TabsContent value="deliveries">
-            <div className="text-center py-12">
-              <p className="text-gray-500">Delivery tracking coming soon...</p>
-            </div>
+            <DeliveryOrdersManager />
           </TabsContent>
 
           <TabsContent value="chat">
-            <div className="text-center py-12">
-              <p className="text-gray-500">Customer chat coming soon...</p>
-            </div>
+            <ChatSystem userRole="delivery_partner" />
           </TabsContent>
         </Tabs>
       </div>

@@ -1,13 +1,41 @@
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/integrations/supabase/client'
+import LiveDeliveryTracker from '@/components/LiveDeliveryTracker'
 import { ShoppingCart, MapPin, Package, User, Heart, Star, Bell } from 'lucide-react'
 
 const CustomerDashboard = () => {
   const { user } = useAuth()
+  const [activeOrders, setActiveOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (user) {
+      loadActiveOrders()
+    }
+  }, [user])
+
+  const loadActiveOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_id', user?.id)
+        .neq('status', 'delivered')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setActiveOrders(data || [])
+    } catch (error) {
+      console.error('Error loading orders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#F7F9F9] p-4">
@@ -107,23 +135,44 @@ const CustomerDashboard = () => {
           </Card>
         </div>
 
-        {/* Recent Activity - Empty as requested */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-[#2C3E50] flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              Recent Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <p className="text-gray-500">No recent activity</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Start browsing shops to see your activity here
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Active Orders - Live Tracking */}
+        {activeOrders.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="text-[#2C3E50] flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Active Orders
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {activeOrders.map(order => (
+                  <LiveDeliveryTracker key={order.id} orderId={order.id} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recent Activity */}
+        {activeOrders.length === 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="text-[#2C3E50] flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <p className="text-gray-500">No recent activity</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Start browsing shops to see your activity here
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <Card>

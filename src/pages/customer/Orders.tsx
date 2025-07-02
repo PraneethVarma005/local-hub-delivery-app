@@ -213,11 +213,9 @@ const Orders = () => {
                 </Button>
               </div>
               <div className="p-4">
-                <ChatSystem
-                  orderId={selectedOrder.id}
-                  shopId={selectedOrder.shop_id}
-                  deliveryPartnerId={selectedOrder.delivery_partner_id}
-                />
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">Chat functionality available soon</p>
+                      </div>
               </div>
             </div>
           </div>

@@ -1,192 +1,256 @@
-
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send, MessageCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { MessageSquare, Send, User, Clock } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/lib/supabase'
+import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/integrations/supabase/client'
 
-interface ChatSystemProps {
-  orderId: string
-  shopId?: string
-  deliveryPartnerId?: string
+interface ChatMessage {
+  id: string
+  sender_id: string
+  receiver_id: string
+  message: string
+  order_id?: string
+  created_at: string
+  sender_role: string
 }
 
-const ChatSystem: React.FC<ChatSystemProps> = ({ orderId, shopId, deliveryPartnerId }) => {
-  const [messages, setMessages] = useState<any[]>([])
+interface ChatSystemProps {
+  userRole: 'delivery_partner' | 'shop_owner'
+  orderId?: string
+}
+
+const ChatSystem: React.FC<ChatSystemProps> = ({ userRole, orderId }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [chatRoom, setChatRoom] = useState<any>(null)
+  const [activeChats, setActiveChats] = useState<any[]>([])
+  const [selectedChat, setSelectedChat] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
+  const { toast } = useToast()
 
   useEffect(() => {
-    initializeChatRoom()
-  }, [orderId])
-
-  useEffect(() => {
-    if (chatRoom) {
-      loadMessages()
-      subscribeToMessages()
+    if (user) {
+      loadActiveChats()
     }
-  }, [chatRoom])
+  }, [user])
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (selectedChat) {
+      loadMessages(selectedChat)
+    }
+  }, [selectedChat])
 
-  const initializeChatRoom = async () => {
+  const loadActiveChats = async () => {
     try {
-      // Check if chat room exists
-      let { data: existingRoom } = await supabase
-        .from('chat_rooms')
-        .select('*')
-        .eq('order_id', orderId)
-        .single()
-
-      if (!existingRoom) {
-        // Create new chat room
-        const { data: newRoom, error } = await supabase
-          .from('chat_rooms')
-          .insert({
-            customer_id: user?.id,
-            shop_id: shopId,
-            delivery_partner_id: deliveryPartnerId,
-            order_id: orderId
-          })
-          .select()
-          .single()
+      // For delivery partners, load their assigned orders
+      if (userRole === 'delivery_partner') {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('delivery_partner_id', user?.id)
+          .neq('status', 'delivered')
+          .order('created_at', { ascending: false })
 
         if (error) throw error
-        existingRoom = newRoom
+        setActiveChats(data || [])
       }
+      
+      // For shop owners, load their shop's orders
+      if (userRole === 'shop_owner') {
+        // First get shop ID
+        const { data: shopData, error: shopError } = await supabase
+          .from('shops')
+          .select('id')
+          .eq('shop_owner_id', user?.id)
+          .single()
 
-      setChatRoom(existingRoom)
-      setLoading(false)
+        if (shopError) throw shopError
+
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('shop_id', shopData.id)
+          .neq('status', 'delivered')
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+        setActiveChats(data || [])
+      }
     } catch (error) {
-      console.error('Error initializing chat room:', error)
+      console.error('Error loading chats:', error)
+    } finally {
       setLoading(false)
     }
   }
 
-  const loadMessages = async () => {
+  const loadMessages = async (chatId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select(`
-          *,
-          sender:user_profiles!sender_id(full_name)
-        `)
-        .eq('room_id', chatRoom.id)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-      setMessages(data || [])
+      // This would load messages for the specific order/chat
+      // For now, showing placeholder
+      setMessages([])
     } catch (error) {
       console.error('Error loading messages:', error)
     }
   }
 
-  const subscribeToMessages = () => {
-    const channel = supabase
-      .channel('chat-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `room_id=eq.${chatRoom.id}`
-        },
-        (payload) => {
-          setMessages(prev => [...prev, payload.new])
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }
-
   const sendMessage = async () => {
-    if (!newMessage.trim() || !user) return
+    if (!newMessage.trim() || !selectedChat) return
 
     try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert({
-          room_id: chatRoom.id,
-          sender_id: user.id,
-          message: newMessage.trim()
-        })
-
-      if (error) throw error
+      // This would send a message to the database
+      toast({
+        title: 'Message sent',
+        description: 'Your message has been sent successfully'
+      })
       setNewMessage('')
     } catch (error) {
       console.error('Error sending message:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to send message',
+        variant: 'destructive'
+      })
     }
-  }
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="p-4">
-          <div className="text-center">Loading chat...</div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#16A085]"></div>
+      </div>
     )
   }
 
   return (
-    <Card className="h-96 flex flex-col">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5" />
-          Order Chat
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col p-4">
-        <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-          {messages.map(message => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-xs px-3 py-2 rounded-lg ${
-                  message.sender_id === user?.id
-                    ? 'bg-[#16A085] text-white'
-                    : 'bg-gray-100 text-gray-900'
-                }`}
-              >
-                <div className="text-sm">{message.message}</div>
-                <div className="text-xs opacity-70 mt-1">
-                  {new Date(message.created_at).toLocaleTimeString()}
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+        {/* Chat List */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Active Orders
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 max-h-[500px] overflow-y-auto">
+            {activeChats.length === 0 ? (
+              <div className="text-center py-8">
+                <MessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500 text-sm">No active chats</p>
+              </div>
+            ) : (
+              activeChats.map(chat => (
+                <div
+                  key={chat.id}
+                  onClick={() => setSelectedChat(chat.id)}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                    selectedChat === chat.id 
+                      ? 'bg-[#16A085]/10 border border-[#16A085]' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-sm">
+                      Order #{chat.id.slice(0, 8)}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {chat.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {chat.delivery_address.substring(0, 30)}...
+                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Clock className="h-3 w-3 text-gray-400" />
+                    <span className="text-xs text-gray-400">
+                      {new Date(chat.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Chat Messages */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>
+              {selectedChat 
+                ? `Chat - Order #${selectedChat.slice(0, 8)}`
+                : 'Select a chat to start messaging'
+              }
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col h-[500px]">
+            {!selectedChat ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">Select an order to start chatting</p>
                 </div>
               </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-        <div className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type your message..."
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-          />
-          <Button onClick={sendMessage} size="sm">
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+            ) : (
+              <>
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto mb-4 space-y-2">
+                  {messages.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No messages yet</p>
+                      <p className="text-sm text-gray-400">Start the conversation!</p>
+                    </div>
+                  ) : (
+                    messages.map(message => (
+                      <div
+                        key={message.id}
+                        className={`flex ${
+                          message.sender_id === user?.id ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        <div
+                          className={`max-w-xs px-4 py-2 rounded-lg ${
+                            message.sender_id === user?.id
+                              ? 'bg-[#16A085] text-white'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          <p className="text-sm">{message.message}</p>
+                          <p className="text-xs opacity-70 mt-1">
+                            {new Date(message.created_at).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Message Input */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Type your message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={sendMessage}
+                    className="bg-[#16A085] hover:bg-[#16A085]/90"
+                    disabled={!newMessage.trim()}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }
 

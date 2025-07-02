@@ -161,6 +161,96 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_inventory: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean | null
+          price: number
+          product_name: string
+          shop_id: string
+          stock_quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          price: number
+          product_name: string
+          shop_id: string
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          price?: number
+          product_name?: string
+          shop_id?: string
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shops: {
+        Row: {
+          contact_number: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          pin_code: string | null
+          shop_address: string
+          shop_image: string | null
+          shop_lat: number | null
+          shop_lng: number | null
+          shop_name: string
+          shop_owner_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          contact_number?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          pin_code?: string | null
+          shop_address: string
+          shop_image?: string | null
+          shop_lat?: number | null
+          shop_lng?: number | null
+          shop_name: string
+          shop_owner_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          contact_number?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          pin_code?: string | null
+          shop_address?: string
+          shop_image?: string | null
+          shop_lat?: number | null
+          shop_lng?: number | null
+          shop_name?: string
+          shop_owner_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_agreements: {
         Row: {
           accepted_at: string | null
