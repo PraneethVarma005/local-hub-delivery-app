@@ -6,6 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -15,7 +16,10 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 200,
+      headers: corsHeaders 
+    });
   }
 
   try {
@@ -31,6 +35,7 @@ serve(async (req) => {
     );
 
     if (authError || !user) {
+      console.error('Auth error:', authError);
       throw new Error('Unauthorized');
     }
 
@@ -38,6 +43,10 @@ serve(async (req) => {
 
     if (!message) {
       throw new Error('No message provided');
+    }
+
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
     }
 
     console.log('Processing message from user:', user.id, 'Message:', message);
@@ -54,7 +63,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a helpful assistant for LocalHub, a local delivery service app. You can help users with questions about orders, deliveries, shops, and general app usage.' 
+            content: 'You are a helpful assistant for LocalHub, a local delivery service app. You can help users with questions about orders, deliveries, shops, and general app usage. Keep responses concise and helpful.' 
           },
           { role: 'user', content: message }
         ],
@@ -65,26 +74,34 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
+      console.error('OpenAI API error:', response.status, errorData);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
+    const aiResponse = data.choices?.[0]?.message?.content;
+
+    if (!aiResponse) {
+      throw new Error('No response from OpenAI');
+    }
 
     console.log('AI Response:', aiResponse);
 
     // Save to chat_logs table
-    const { error: logError } = await supabase
-      .from('chat_logs')
-      .insert({
-        user_id: user.id,
-        user_message: message,
-        ai_response: aiResponse,
-      });
+    try {
+      const { error: logError } = await supabase
+        .from('chat_logs')
+        .insert({
+          user_id: user.id,
+          user_message: message,
+          ai_response: aiResponse,
+        });
 
-    if (logError) {
-      console.error('Error saving chat log:', logError);
+      if (logError) {
+        console.error('Error saving chat log:', logError);
+      }
+    } catch (logError) {
+      console.error('Exception saving chat log:', logError);
     }
 
     return new Response(JSON.stringify({ response: aiResponse }), {

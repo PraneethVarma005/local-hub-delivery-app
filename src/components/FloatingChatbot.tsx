@@ -30,7 +30,7 @@ const FloatingChatbot = () => {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-80 h-96 bg-white rounded-lg shadow-2xl border z-50 flex flex-col">
+        <div className="fixed bottom-24 right-6 w-80 h-96 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border z-50 flex flex-col">
           <div className="bg-[#16A085] text-white p-3 rounded-t-lg">
             <h3 className="font-semibold">AI Assistant</h3>
             <p className="text-xs opacity-90">Ask me anything about LocalHub</p>

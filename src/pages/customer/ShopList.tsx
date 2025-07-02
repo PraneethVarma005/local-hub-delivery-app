@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { MapPin, Clock, Star, Search } from 'lucide-react'
+import { MapPin, Clock, Star, Search, RefreshCw } from 'lucide-react'
 import LeafletMap from '@/components/LeafletMap'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLocation } from '@/contexts/LocationContext'
@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase'
 import { calculateDistance, isWithinRadius } from '@/utils/distance'
 import { useLanguage } from '@/hooks/useLanguage'
 import LanguageSelector from '@/components/LanguageSelector'
+import { useToast } from '@/hooks/use-toast'
 
 const ShopList = () => {
   const [shops, setShops] = useState<any[]>([])
@@ -21,34 +22,59 @@ const ShopList = () => {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { user } = useAuth()
-  const { userLocation } = useLocation()
+  const { user, loading: authLoading } = useAuth()
+  const { userLocation, loading: locationLoading } = useLocation()
   const { t } = useLanguage()
+  const { toast } = useToast()
 
   useEffect(() => {
-    loadShops()
-  }, [])
+    // Only load shops when auth and location are ready
+    if (!authLoading && !locationLoading) {
+      loadShops()
+    }
+  }, [authLoading, locationLoading])
 
   const loadShops = async () => {
     try {
       console.log('Loading shops from database...')
+      setLoading(true)
+      setError(null)
       
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('role', 'shop_owner')
-        .order('average_rating', { ascending: false })
+        .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error loading shops:', error)
+        throw error
+      }
 
-      console.log('Shops loaded:', data)
+      console.log('Shops loaded:', data?.length || 0, 'shops')
       setShops(data || [])
-      setLoading(false)
+      
+      if (!data || data.length === 0) {
+        console.log('No shops found in database')
+      }
+      
     } catch (err) {
-      console.error('Error loading shops:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load shops')
+      console.error('Exception loading shops:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load shops'
+      setError(errorMessage)
+      
+      toast({
+        title: 'Error Loading Shops',
+        description: 'Unable to load shops, please try again later',
+        variant: 'destructive'
+      })
+    } finally {
       setLoading(false)
     }
+  }
+
+  const retryLoadShops = () => {
+    loadShops()
   }
 
   const filteredShops = shops.filter(shop => {
@@ -93,12 +119,25 @@ const ShopList = () => {
     return `${distance.toFixed(1)} km away`
   }
 
-  if (loading) {
+  if (authLoading || locationLoading) {
     return (
-      <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F9F9] dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading shops...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">
+            {authLoading ? 'Checking authentication...' : 'Getting your location...'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F7F9F9] dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085] mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading shops...</p>
         </div>
       </div>
     )
@@ -106,14 +145,23 @@ const ShopList = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+      <div className="min-h-screen bg-[#F7F9F9] dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-500 mb-4">
+            <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Unable to load shops</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            {error === 'Failed to load shops' ? 'Unable to load shops, please try again later' : error}
+          </p>
           <Button 
-            onClick={() => window.location.reload()} 
+            onClick={retryLoadShops} 
             className="bg-[#16A085] hover:bg-[#16A085]/90"
           >
-            Retry
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
           </Button>
         </div>
       </div>
@@ -121,12 +169,12 @@ const ShopList = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F9F9] p-4">
+    <div className="min-h-screen bg-[#F7F9F9] dark:bg-gray-900 p-4">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-[#2C3E50] mb-2">{t('nearbyShops')}</h1>
-            <p className="text-gray-600">Discover and order from local shops near you</p>
+            <h1 className="text-3xl font-bold text-[#2C3E50] dark:text-white mb-2">{t('nearbyShops')}</h1>
+            <p className="text-gray-600 dark:text-gray-300">Discover and order from local shops near you</p>
             {userLocation && (
               <p className="text-sm text-gray-500 mt-1">
                 Showing shops within 10km of your location
@@ -190,7 +238,7 @@ const ShopList = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredShops.map(shop => (
             <Link key={shop.id} to={`/customer/shop/${shop.id}`}>
-              <Card className="hover:shadow-lg cursor-pointer h-full">
+              <Card className="hover:shadow-lg cursor-pointer h-full transition-shadow">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between mb-2">
                     <Badge 
@@ -206,17 +254,17 @@ const ShopList = () => {
                       Open
                     </Badge>
                   </div>
-                  <CardTitle className="text-[#2C3E50] text-lg">{shop.shop_name}</CardTitle>
-                  <p className="text-sm text-gray-600">{shop.full_name}</p>
+                  <CardTitle className="text-[#2C3E50] dark:text-white text-lg">{shop.shop_name}</CardTitle>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{shop.full_name}</p>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="flex items-center text-sm text-gray-600">
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                       <MapPin className="h-4 w-4 mr-1" />
                       {shop.shop_address}
                     </div>
                     {userLocation && shop.shop_lat && shop.shop_lng && (
-                      <div className="flex items-center text-sm text-gray-600">
+                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                         <Clock className="h-4 w-4 mr-1" />
                         {getDistanceText(shop)}
                       </div>
@@ -244,19 +292,42 @@ const ShopList = () => {
           ))}
         </div>
 
-        {filteredShops.length === 0 && (
+        {filteredShops.length === 0 && shops.length > 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">
-              {userLocation 
-                ? 'No shops found within 10km of your location'
-                : 'No shops found matching your criteria'
-              }
+            <p className="text-gray-500 dark:text-gray-400 text-lg">
+              No shops found matching your criteria
             </p>
-            {!userLocation && (
-              <p className="text-gray-400 text-sm mt-2">
-                Enable location access to see nearby shops
-              </p>
-            )}
+            <Button 
+              onClick={() => {
+                setSelectedCategory('')
+                setSearchTerm('')
+              }}
+              variant="outline"
+              className="mt-4"
+            >
+              Clear Filters
+            </Button>
+          </div>
+        )}
+
+        {shops.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-6">
+              <svg className="w-20 h-20 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No shops available</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
+              No shops available in your area
+            </p>
+            <Button 
+              onClick={retryLoadShops} 
+              className="bg-[#16A085] hover:bg-[#16A085]/90"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
           </div>
         )}
       </div>

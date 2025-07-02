@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -74,6 +73,7 @@ const Login = () => {
           title: 'Welcome back!',
           description: 'You have successfully logged in.',
         })
+        // Redirect will happen in useEffect when user state updates
       }
     } catch (error) {
       console.error('Login exception:', error)
@@ -115,10 +115,10 @@ const Login = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F9F9] dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#16A085] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     )
@@ -130,13 +130,13 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F7F9F9] dark:bg-gray-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-[#2C3E50]">
+          <CardTitle className="text-2xl font-bold text-[#2C3E50] dark:text-white">
             Welcome Back
           </CardTitle>
-          <p className="text-gray-600">Sign in to your LocalHub account</p>
+          <p className="text-gray-600 dark:text-gray-300">Sign in to your LocalHub account</p>
         </CardHeader>
         <CardContent>
           <RoleSelector 
@@ -164,7 +164,7 @@ const Login = () => {
                 <Separator className="w-full" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#F7F9F9] px-2 text-gray-500">
+                <span className="bg-[#F7F9F9] dark:bg-gray-800 px-2 text-gray-500">
                   Or continue with email
                 </span>
               </div>
@@ -210,7 +210,7 @@ const Login = () => {
           </div>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-300">
               Don't have an account?{' '}
               <Link
                 to="/auth/register"
