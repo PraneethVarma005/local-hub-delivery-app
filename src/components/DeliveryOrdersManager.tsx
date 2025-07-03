@@ -141,8 +141,9 @@ const DeliveryOrdersManager = () => {
     }
   }
 
-  const updateLiveLocation = async () => {
-    if (!currentLocation || !selectedOrder) return
+  const updateLiveLocation = async (lat?: number, lng?: number) => {
+    const location = lat && lng ? { lat, lng } : currentLocation
+    if (!location || !selectedOrder) return
 
     try {
       const { error } = await supabase
@@ -150,12 +151,16 @@ const DeliveryOrdersManager = () => {
         .insert({
           order_id: selectedOrder.id,
           delivery_partner_id: user?.id,
-          current_lat: currentLocation.lat,
-          current_lng: currentLocation.lng,
+          current_lat: location.lat,
+          current_lng: location.lng,
           status: selectedOrder.status
         })
 
       if (error) throw error
+
+      if (lat && lng) {
+        setCurrentLocation({ lat, lng })
+      }
 
       toast({
         title: 'Success',
@@ -318,7 +323,7 @@ const DeliveryOrdersManager = () => {
                           View Map
                         </Button>
                         <Button
-                          onClick={updateLiveLocation}
+                          onClick={() => updateLiveLocation()}
                           variant="outline"
                           size="sm"
                         >
@@ -349,11 +354,17 @@ const DeliveryOrdersManager = () => {
                 showShops={true}
                 height="400px"
                 center={currentLocation || undefined}
+                showCurrentLocationButton={true}
+                onCurrentLocationUpdate={updateLiveLocation}
+                deliveryLocation={currentLocation || undefined}
+                customerLocation={selectedOrder.delivery_lat && selectedOrder.delivery_lng 
+                  ? { lat: selectedOrder.delivery_lat, lng: selectedOrder.delivery_lng }
+                  : undefined}
               />
               
               <div className="flex justify-between">
                 <Button 
-                  onClick={updateLiveLocation}
+                  onClick={() => updateLiveLocation()}
                   className="bg-[#16A085] hover:bg-[#16A085]/90"
                 >
                   Update My Location

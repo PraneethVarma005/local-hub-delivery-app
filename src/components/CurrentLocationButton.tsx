@@ -92,7 +92,7 @@ const CurrentLocationButton: React.FC<CurrentLocationButtonProps> = ({
       ) : (
         <MapPin className="h-4 w-4" />
       )}
-      {loading ? 'Getting location...' : 'Use Current Location'}
+      {loading ? 'Getting location...' : '📍 Use My Location'}
     </Button>
   )
 }

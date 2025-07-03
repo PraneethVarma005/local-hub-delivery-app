@@ -1,178 +1,148 @@
-
-import React, { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { MapPin, Clock, User } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { MapPin, Navigation, RefreshCw } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
+import { useToast } from '@/hooks/use-toast'
 import LeafletMap from './LeafletMap'
 
-interface DeliveryPartner {
+interface Order {
   id: string
-  name: string
-  lat: number
-  lng: number
-  status: 'assigned' | 'picked_up' | 'on_the_way' | 'delivered'
-  estimatedTime?: string
+  delivery_address: string
+  delivery_lat?: number
+  delivery_lng?: number
+  pickup_address: string
+  pickup_lat?: number
+  pickup_lng?: number
+  status: string
 }
 
 interface LiveTrackerProps {
   orderId: string
-  customerLocation: { lat: number; lng: number }
-  shopLocation: { lat: number; lng: number }
+  isDeliveryPartner?: boolean
 }
 
-const LiveTracker: React.FC<LiveTrackerProps> = ({ 
-  orderId, 
-  customerLocation, 
-  shopLocation 
-}) => {
-  const [deliveryPartner, setDeliveryPartner] = useState<DeliveryPartner | null>(null)
+const LiveTracker: React.FC<LiveTrackerProps> = ({ orderId, isDeliveryPartner = false }) => {
+  const [order, setOrder] = useState<Order | null>(null)
+  const [deliveryLocation, setDeliveryLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
+  const { user } = useAuth()
+  const { toast } = useToast()
 
   useEffect(() => {
-    // Mock data for demonstration
-    const mockDeliveryPartner: DeliveryPartner = {
-      id: '1',
-      name: 'Raj Kumar',
-      lat: 28.6100, // Slightly different from shop location to show movement
-      lng: 77.2050,
-      status: 'on_the_way',
-      estimatedTime: '15 mins'
+    loadOrderDetails()
+    if (isDeliveryPartner) {
+      loadDeliveryLocation()
     }
+  }, [orderId, isDeliveryPartner])
 
-    // Simulate getting delivery partner data
-    setTimeout(() => {
-      setDeliveryPartner(mockDeliveryPartner)
+  const loadOrderDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single()
+
+      if (error) throw error
+      setOrder(data)
+    } catch (error) {
+      console.error('Error loading order:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load order details',
+        variant: 'destructive'
+      })
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
+  }
 
-    // Simulate live location updates
-    const interval = setInterval(() => {
-      if (mockDeliveryPartner) {
-        // Simulate movement towards customer location
-        const deltaLat = (customerLocation.lat - mockDeliveryPartner.lat) * 0.1
-        const deltaLng = (customerLocation.lng - mockDeliveryPartner.lng) * 0.1
-        
-        mockDeliveryPartner.lat += deltaLat
-        mockDeliveryPartner.lng += deltaLng
-        
-        setDeliveryPartner({ ...mockDeliveryPartner })
+  const loadDeliveryLocation = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('delivery_tracking')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (data && data.current_lat && data.current_lng) {
+        setDeliveryLocation({
+          lat: data.current_lat,
+          lng: data.current_lng
+        })
       }
-    }, 5000) // Update every 5 seconds
-
-    return () => clearInterval(interval)
-  }, [orderId, customerLocation])
+    } catch (error) {
+      console.log('No delivery location found yet')
+    }
+  }
 
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-6">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#16A085] mx-auto mb-4"></div>
-            <p>Finding delivery partner...</p>
-          </div>
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#16A085]"></div>
         </CardContent>
       </Card>
     )
   }
 
-  if (!deliveryPartner) {
+  if (!order) {
     return (
       <Card>
-        <CardContent className="p-6">
-          <p className="text-center text-gray-500">No delivery partner assigned yet</p>
+        <CardContent className="text-center p-8">
+          <p className="text-gray-500">Order not found</p>
         </CardContent>
       </Card>
     )
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'assigned': return 'bg-yellow-500'
-      case 'picked_up': return 'bg-blue-500'
-      case 'on_the_way': return 'bg-green-500'
-      case 'delivered': return 'bg-gray-500'
-      default: return 'bg-gray-500'
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'assigned': return 'Assigned'
-      case 'picked_up': return 'Order Picked Up'
-      case 'on_the_way': return 'On the Way'
-      case 'delivered': return 'Delivered'
-      default: return 'Unknown'
-    }
-  }
+  const customerLocation = order.delivery_lat && order.delivery_lng 
+    ? { lat: order.delivery_lat, lng: order.delivery_lng }
+    : null
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Live Delivery Tracking
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <User className="h-8 w-8 text-[#16A085]" />
-              <div>
-                <p className="font-medium">{deliveryPartner.name}</p>
-                <p className="text-sm text-gray-600">Delivery Partner</p>
-              </div>
-            </div>
-            <Badge className={`${getStatusColor(deliveryPartner.status)} text-white`}>
-              {getStatusText(deliveryPartner.status)}
-            </Badge>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Navigation className="h-5 w-5" />
+          {isDeliveryPartner ? 'Delivery Route' : 'Track Your Order'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 className="font-medium text-sm text-gray-700 mb-1">Pickup Location</h4>
+            <p className="text-sm text-gray-600">{order.pickup_address}</p>
           </div>
-          
-          {deliveryPartner.estimatedTime && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Clock className="h-4 w-4" />
-              <span>Estimated delivery: {deliveryPartner.estimatedTime}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <div>
+            <h4 className="font-medium text-sm text-gray-700 mb-1">Delivery Location</h4>
+            <p className="text-sm text-gray-600">{order.delivery_address}</p>
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Live Location</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <div className="h-96">
           <LeafletMap
-            shops={[
-              {
-                id: 'delivery-partner',
-                name: deliveryPartner.name,
-                lat: deliveryPartner.lat,
-                lng: deliveryPartner.lng,
-                category: 'delivery'
-              },
-              {
-                id: 'customer',
-                name: 'Delivery Location',
-                lat: customerLocation.lat,
-                lng: customerLocation.lng,
-                category: 'customer'
-              },
-              {
-                id: 'shop',
-                name: 'Shop',
-                lat: shopLocation.lat,
-                lng: shopLocation.lng,
-                category: 'shop'
-              }
-            ]}
-            height="300px"
-            showShops={true}
-            center={{ lat: deliveryPartner.lat, lng: deliveryPartner.lng }}
+            height="100%"
+            center={customerLocation || undefined}
+            deliveryLocation={deliveryLocation || undefined}
+            customerLocation={customerLocation || undefined}
+            zoom={14}
           />
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        {!isDeliveryPartner && deliveryLocation && (
+          <div className="text-center text-sm text-gray-600">
+            <p>🚗 Your delivery partner is on the way!</p>
+            <p>Last updated: {new Date().toLocaleTimeString()}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

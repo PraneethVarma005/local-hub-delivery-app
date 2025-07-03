@@ -11,8 +11,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useLocation } from '@/contexts/LocationContext'
 import { supabase } from '@/lib/supabase'
 import { calculateDistance, isWithinRadius } from '@/utils/distance'
-import { useLanguage } from '@/hooks/useLanguage'
-import LanguageSelector from '@/components/LanguageSelector'
 import { useToast } from '@/hooks/use-toast'
 
 const ShopList = () => {
@@ -24,7 +22,7 @@ const ShopList = () => {
   const [error, setError] = useState<string | null>(null)
   const { user, loading: authLoading } = useAuth()
   const { userLocation, loading: locationLoading } = useLocation()
-  const { t } = useLanguage()
+  
   const { toast } = useToast()
 
   useEffect(() => {
@@ -173,7 +171,7 @@ const ShopList = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-[#2C3E50] dark:text-white mb-2">{t('nearbyShops')}</h1>
+            <h1 className="text-3xl font-bold text-[#2C3E50] dark:text-white mb-2">Nearby Shops</h1>
             <p className="text-gray-600 dark:text-gray-300">Discover and order from local shops near you</p>
             {userLocation && (
               <p className="text-sm text-gray-500 mt-1">
@@ -181,7 +179,7 @@ const ShopList = () => {
               </p>
             )}
           </div>
-          <LanguageSelector />
+          
         </div>
 
         {/* Search and Filters */}
@@ -190,7 +188,7 @@ const ShopList = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder={t('search') + ' shops...'}
+                placeholder="Search shops..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"

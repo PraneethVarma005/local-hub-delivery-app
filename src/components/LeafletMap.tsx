@@ -28,6 +28,10 @@ interface LeafletMapProps {
   onLocationSelect?: (lat: number, lng: number, address: string) => void
   selectedLocation?: { lat: number; lng: number }
   showLocationPicker?: boolean
+  showCurrentLocationButton?: boolean
+  onCurrentLocationUpdate?: (lat: number, lng: number) => void
+  deliveryLocation?: { lat: number; lng: number }
+  customerLocation?: { lat: number; lng: number }
 }
 
 const LeafletMap: React.FC<LeafletMapProps> = ({
@@ -38,11 +42,39 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   zoom = 13,
   onLocationSelect,
   selectedLocation,
-  showLocationPicker = false
+  showLocationPicker = false,
+  showCurrentLocationButton = false,
+  onCurrentLocationUpdate,
+  deliveryLocation,
+  customerLocation
 }) => {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersRef = useRef<L.Marker[]>([])
+  const [currentLocation, setCurrentLocation] = React.useState<{ lat: number; lng: number } | null>(null)
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+          setCurrentLocation(location)
+          if (onCurrentLocationUpdate) {
+            onCurrentLocationUpdate(location.lat, location.lng)
+          }
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.setView([location.lat, location.lng], 15)
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error)
+        }
+      )
+    }
+  }
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return
@@ -119,12 +151,91 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   }, [selectedLocation, showLocationPicker])
 
+  // Add delivery and customer location markers
+  useEffect(() => {
+    if (!mapInstanceRef.current) return
+
+    // Create custom icons for different marker types
+    const deliveryIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    })
+
+    const customerIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    })
+
+    const currentLocationIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    })
+
+    // Clear existing markers for special locations
+    markersRef.current = markersRef.current.filter(marker => {
+      const popup = marker.getPopup()
+      if (popup && (popup.getContent()?.toString().includes('Delivery') || 
+                    popup.getContent()?.toString().includes('Customer') ||
+                    popup.getContent()?.toString().includes('Current'))) {
+        marker.remove()
+        return false
+      }
+      return true
+    })
+
+    // Add delivery location marker
+    if (deliveryLocation) {
+      const marker = L.marker([deliveryLocation.lat, deliveryLocation.lng], { icon: deliveryIcon })
+        .addTo(mapInstanceRef.current!)
+        .bindPopup('<strong>Delivery Partner</strong>')
+      markersRef.current.push(marker)
+    }
+
+    // Add customer location marker
+    if (customerLocation) {
+      const marker = L.marker([customerLocation.lat, customerLocation.lng], { icon: customerIcon })
+        .addTo(mapInstanceRef.current!)
+        .bindPopup('<strong>Customer Location</strong>')
+      markersRef.current.push(marker)
+    }
+
+    // Add current location marker
+    if (currentLocation) {
+      const marker = L.marker([currentLocation.lat, currentLocation.lng], { icon: currentLocationIcon })
+        .addTo(mapInstanceRef.current!)
+        .bindPopup('<strong>Your Current Location</strong>')
+      markersRef.current.push(marker)
+    }
+  }, [deliveryLocation, customerLocation, currentLocation])
+
   return (
-    <div 
-      ref={mapRef} 
-      style={{ height, width: '100%', zIndex: 1 }}
-      className="rounded-lg border"
-    />
+    <div className="relative">
+      <div 
+        ref={mapRef} 
+        style={{ height, width: '100%', zIndex: 1 }}
+        className="rounded-lg border"
+      />
+      {showCurrentLocationButton && (
+        <button
+          onClick={getCurrentLocation}
+          className="absolute top-2 right-2 z-10 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
+        >
+          📍 Use My Location
+        </button>
+      )}
+    </div>
   )
 }
 

@@ -87,15 +87,15 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'AI unavailable, please try later',
+        content: 'AI service is currently unavailable. Please try again later.',
         timestamp: new Date()
       }
       
       setMessages(prev => [...prev, errorMessage])
       
       toast({
-        title: 'Error',
-        description: 'AI unavailable, please try later',
+        title: 'Service Unavailable',
+        description: 'AI service is currently unavailable. Please try again later.',
         variant: 'destructive'
       })
     } finally {

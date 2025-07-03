@@ -6,13 +6,13 @@ import InventoryManagement from '@/components/InventoryManagement'
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
 import ShopSetupForm from '@/components/ShopSetupForm'
 import ShopOrdersManager from '@/components/ShopOrdersManager'
-import { useLanguage } from '@/hooks/useLanguage'
-import LanguageSelector from '@/components/LanguageSelector'
+
+
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 
 const ShopDashboard = () => {
-  const { t } = useLanguage()
+  
   const { user } = useAuth()
   const [hasShop, setHasShop] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
@@ -66,7 +66,6 @@ const ShopDashboard = () => {
               </h1>
               <p className="text-gray-600">Let's set up your shop to start selling</p>
             </div>
-            <LanguageSelector />
           </div>
           <ShopSetupForm onShopCreated={handleShopCreated} />
         </div>
@@ -80,22 +79,22 @@ const ShopDashboard = () => {
         <div className="mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-[#2C3E50] mb-2">
-              {t('dashboard')} - Shop Owner
+              Dashboard - Shop Owner
             </h1>
             <p className="text-gray-600">Manage your shop and track performance</p>
           </div>
-          <LanguageSelector />
+          
         </div>
 
         <Tabs defaultValue="inventory" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="inventory" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
-              {t('inventory')}
+              Inventory
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              {t('analytics')}
+              Analytics
             </TabsTrigger>
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />

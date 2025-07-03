@@ -7,7 +7,7 @@ import { MapPin, Clock, Star, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ChatSystem from '@/components/ChatSystem'
-import LiveDeliveryTracker from '@/components/LiveDeliveryTracker'
+import LiveTracker from '@/components/LiveTracker'
 import RatingSystem from '@/components/RatingSystem'
 
 const Orders = () => {
@@ -232,7 +232,7 @@ const Orders = () => {
                 </Button>
               </div>
               <div className="p-4">
-                <LiveDeliveryTracker orderId={selectedOrder.id} />
+                <LiveTracker orderId={selectedOrder.id} isDeliveryPartner={false} />
               </div>
             </div>
           </div>

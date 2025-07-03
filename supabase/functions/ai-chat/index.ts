@@ -11,7 +11,7 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const openAIApiKey = Deno.env.get('OpenAI_ChatGPT_Key');
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -46,43 +46,81 @@ serve(async (req) => {
     }
 
     if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+      console.error('OpenAI API key not configured - available env vars:', Object.keys(Deno.env.toObject()));
+      return new Response(JSON.stringify({ 
+        error: 'AI service is currently unavailable. Please try again later.' 
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('Processing message from user:', user.id, 'Message:', message);
 
-    // Call OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are a helpful assistant for LocalHub, a local delivery service app. You can help users with questions about orders, deliveries, shops, and general app usage. Keep responses concise and helpful.' 
-          },
-          { role: 'user', content: message }
-        ],
-        max_tokens: 500,
-        temperature: 0.7,
-      }),
-    });
+    // Call OpenAI API with retry logic
+    let response;
+    let retryCount = 0;
+    const maxRetries = 2;
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenAI API error:', response.status, errorData);
-      throw new Error(`OpenAI API error: ${response.status}`);
+    while (retryCount <= maxRetries) {
+      try {
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { 
+                role: 'system', 
+                content: 'You are a helpful assistant for LocalHub, a local delivery service app. You can help users with questions about orders, deliveries, shops, and general app usage. Keep responses concise and helpful.' 
+              },
+              { role: 'user', content: message }
+            ],
+            max_tokens: 500,
+            temperature: 0.7,
+          }),
+        });
+        break;
+      } catch (fetchError) {
+        console.error(`OpenAI API fetch attempt ${retryCount + 1} failed:`, fetchError);
+        retryCount++;
+        if (retryCount > maxRetries) {
+          return new Response(JSON.stringify({ 
+            error: 'AI service is currently unavailable. Please try again later.' 
+          }), {
+            status: 503,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      }
+    }
+
+    if (!response || !response.ok) {
+      const errorData = response ? await response.text() : 'No response received';
+      console.error('OpenAI API error:', response?.status, errorData);
+      return new Response(JSON.stringify({ 
+        error: 'AI service is currently unavailable. Please try again later.' 
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content;
 
     if (!aiResponse) {
-      throw new Error('No response from OpenAI');
+      return new Response(JSON.stringify({ 
+        error: 'AI service is currently unavailable. Please try again later.' 
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('AI Response:', aiResponse);
@@ -111,9 +149,9 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in ai-chat function:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'An error occurred processing your request' 
+      error: 'AI service is currently unavailable. Please try again later.' 
     }), {
-      status: 500,
+      status: 503,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
