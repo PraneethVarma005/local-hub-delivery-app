@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Send, Bot, User, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/integrations/supabase/client'
+import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 
 interface Message {
@@ -65,11 +65,11 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
       console.log('AI chat response received:', { data, error })
 
       if (error) {
-        console.error('AI chat error:', error)
+        console.error('AI chat function error:', error)
         throw new Error(error.message || 'Failed to get AI response')
       }
 
-      if (!data?.response) {
+      if (!data?.response || typeof data.response !== 'string') {
         console.error('Invalid response format:', data)
         throw new Error('Invalid response from AI service')
       }
@@ -82,6 +82,15 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
       }
 
       setMessages(prev => [...prev, assistantMessage])
+      
+      // Show success toast for successful AI responses
+      if (!data.response.includes('Sorry') && !data.response.includes('unavailable')) {
+        toast({
+          title: 'AI Assistant',
+          description: 'Response received successfully',
+        })
+      }
+      
     } catch (error) {
       console.error('Chat error:', error)
       
@@ -89,7 +98,7 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'I apologize, but I\'m having trouble processing your request right now. Please try again in a moment.',
+        content: 'Sorry, I\'m experiencing some technical difficulties. Please try again in a moment.',
         timestamp: new Date()
       }
       
@@ -203,6 +212,7 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
           placeholder="Ask me anything about LocalHub..."
           disabled={loading}
           className="flex-1"
+          maxLength={500}
         />
         <Button 
           type="submit" 

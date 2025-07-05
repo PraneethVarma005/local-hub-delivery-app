@@ -50,14 +50,14 @@ serve(async (req) => {
     
     const { message } = requestBody;
 
-    if (!message) {
-      throw new Error('No message provided');
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      throw new Error('No valid message provided');
     }
 
     if (!openAIApiKey) {
       console.error('OpenAI API key not configured');
       return new Response(JSON.stringify({ 
-        response: 'AI service is currently unavailable. The OpenAI API key is not configured. Please contact support.' 
+        response: 'Sorry, I\'m unavailable at the moment. The AI service is not configured. Please contact support.' 
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -66,78 +66,55 @@ serve(async (req) => {
 
     console.log('Processing message from user:', user.id, 'Message length:', message.length);
 
-    // Call OpenAI API with enhanced retry logic
-    let response;
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    while (retryCount <= maxRetries) {
-      try {
-        console.log(`OpenAI API attempt ${retryCount + 1}`);
-        
-        response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              { 
-                role: 'system', 
-                content: 'You are a helpful assistant for LocalHub, a local delivery service app. You help users with questions about orders, deliveries, shops, and general app usage. Keep responses concise, friendly, and helpful. If users ask about technical issues, provide clear step-by-step guidance.' 
-              },
-              { role: 'user', content: message }
-            ],
-            max_tokens: 500,
-            temperature: 0.7,
-          }),
-        });
-
-        if (response.ok) {
-          console.log('OpenAI API call successful');
-          break;
-        } else {
-          const errorText = await response.text();
-          console.error(`OpenAI API error (attempt ${retryCount + 1}):`, response.status, errorText);
-          throw new Error(`OpenAI API error: ${response.status}`);
-        }
-      } catch (fetchError) {
-        console.error(`OpenAI API fetch attempt ${retryCount + 1} failed:`, fetchError);
-        retryCount++;
-        
-        if (retryCount > maxRetries) {
-          console.error('All OpenAI API attempts failed');
-          return new Response(JSON.stringify({ 
-            response: 'I apologize, but I\'m having trouble connecting to the AI service right now. Please try again in a moment, or contact support if the issue persists.' 
-          }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        
-        // Wait before retry (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1)));
-      }
-    }
-
-    const data = await response.json();
-    console.log('OpenAI response received, choices:', data.choices?.length || 0);
-    
-    const aiResponse = data.choices?.[0]?.message?.content;
-
-    if (!aiResponse) {
-      console.error('No AI response content received');
-      return new Response(JSON.stringify({ 
-        response: 'I received your message but couldn\'t generate a proper response. Please try rephrasing your question or try again later.' 
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // Call OpenAI API with enhanced error handling
+    let aiResponse;
+    try {
+      console.log('Making OpenAI API call');
+      
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { 
+              role: 'system', 
+              content: 'You are a helpful assistant for LocalHub, a local delivery service app. You help users with questions about orders, deliveries, shops, and general app usage. Keep responses concise, friendly, and helpful. If users ask about technical issues, provide clear step-by-step guidance.' 
+            },
+            { role: 'user', content: message.trim() }
+          ],
+          max_tokens: 500,
+          temperature: 0.7,
+        }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI API error:', response.status, errorText);
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('OpenAI response received, choices:', data.choices?.length || 0);
+      
+      aiResponse = data.choices?.[0]?.message?.content;
+
+      if (!aiResponse || typeof aiResponse !== 'string') {
+        console.error('Invalid AI response format:', data);
+        throw new Error('Invalid response from OpenAI');
+      }
+
+    } catch (openAIError) {
+      console.error('OpenAI API call failed:', openAIError);
+      
+      // Return a friendly fallback message
+      aiResponse = 'Sorry, I\'m unavailable at the moment. Please try again in a few minutes, or contact support if the issue persists.';
     }
 
-    console.log('AI Response generated successfully, length:', aiResponse.length);
+    console.log('AI Response generated, length:', aiResponse.length);
 
     // Save to chat_logs table
     try {
@@ -145,7 +122,7 @@ serve(async (req) => {
         .from('chat_logs')
         .insert({
           user_id: user.id,
-          user_message: message,
+          user_message: message.trim(),
           ai_response: aiResponse,
         });
 
@@ -165,10 +142,14 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in ai-chat function:', error);
     
-    // Return a user-friendly error message
-    const errorMessage = error.message === 'Unauthorized' 
-      ? 'Please log in to use the AI assistant.'
-      : 'I\'m experiencing some technical difficulties. Please try again in a moment.';
+    // Return user-friendly error messages
+    let errorMessage = 'Sorry, I\'m experiencing some technical difficulties. Please try again in a moment.';
+    
+    if (error.message === 'Unauthorized') {
+      errorMessage = 'Please log in to use the AI assistant.';
+    } else if (error.message.includes('No valid message')) {
+      errorMessage = 'Please provide a valid message to get assistance.';
+    }
     
     return new Response(JSON.stringify({ 
       response: errorMessage

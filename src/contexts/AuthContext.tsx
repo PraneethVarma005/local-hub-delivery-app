@@ -28,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -41,6 +42,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session)
         setUser(session?.user ?? null)
+        
+        // Fetch user role from users table
+        if (session?.user) {
+          try {
+            const { data: userData, error } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', session.user.id)
+              .single()
+            
+            if (error) {
+              console.error('Error fetching user role:', error)
+              setUserRole('customer') // fallback
+            } else {
+              setUserRole(userData.role)
+            }
+          } catch (error) {
+            console.error('Exception fetching user role:', error)
+            setUserRole('customer') // fallback
+          }
+        } else {
+          setUserRole(null)
+        }
+        
         setLoading(false)
       }
     )
@@ -56,6 +81,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session)
         setUser(session?.user ?? null)
+        
+        // Fetch user role from users table
+        if (session?.user) {
+          try {
+            const { data: userData, error } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', session.user.id)
+              .single()
+            
+            if (error) {
+              console.error('Error fetching user role:', error)
+              setUserRole('customer') // fallback
+            } else {
+              setUserRole(userData.role)
+            }
+          } catch (error) {
+            console.error('Exception fetching user role:', error)
+            setUserRole('customer') // fallback
+          }
+        } else {
+          setUserRole(null)
+        }
       } catch (error) {
         console.error('Error getting initial session:', error)
       } finally {
@@ -73,9 +121,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [])
 
+  const checkExistingUser = async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('email', email.toLowerCase())
+        .single()
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.error('Error checking existing user:', error)
+        return null
+      }
+      
+      return data
+    } catch (error) {
+      console.error('Exception checking existing user:', error)
+      return null
+    }
+  }
+
   const signUp = async (email: string, password: string, userData: any) => {
     try {
       console.log('SignUp attempt for:', email)
+      
+      // Check if user already exists
+      const existingUser = await checkExistingUser(email)
+      if (existingUser) {
+        return { 
+          error: { 
+            message: `This email is already registered as a ${existingUser.role.replace('_', ' ')}. Please log in or use a different email.` 
+          } 
+        }
+      }
       
       const redirectUrl = `${window.location.origin}/auth/login`
       
@@ -161,26 +239,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Clear local state immediately
       setUser(null)
       setSession(null)
+      setUserRole(null)
     } catch (error) {
       console.error('SignOut exception:', error)
     }
-  }
-
-  const getUserRole = () => {
-    if (!user) return 'customer'
-    
-    // Check user_metadata first (for regular signups and updated roles)
-    if (user.user_metadata?.role) {
-      return user.user_metadata.role
-    }
-    
-    // Check app_metadata as fallback (for OAuth providers like Google)
-    if (user.app_metadata?.role) {
-      return user.app_metadata.role
-    }
-    
-    // Default to customer
-    return 'customer'
   }
 
   const value = {
@@ -191,14 +253,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signInWithGoogle,
     signOut,
-    userRole: getUserRole()
+    userRole
   }
 
   console.log('Auth state:', {
     hasUser: !!user,
     hasSession: !!session,
     loading,
-    role: getUserRole(),
+    role: userRole,
     provider: user?.app_metadata?.provider
   })
 

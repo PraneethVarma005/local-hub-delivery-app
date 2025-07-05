@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import { createUserProfile } from '@/utils/userProfile'
+import { supabase } from '@/lib/supabase'
 
 const AuthCallback = () => {
   const navigate = useNavigate()
@@ -19,16 +19,51 @@ const AuthCallback = () => {
           console.log('OAuth user authenticated:', user.email)
           
           // Get role from URL params (for Google OAuth)
-          const roleFromUrl = searchParams.get('role')
-          const finalRole = roleFromUrl || userRole || 'customer'
+          const roleFromUrl = searchParams.get('role') || 'customer'
           
-          // Create or update user profile for Google OAuth users
+          // For Google OAuth users, check if they already have a role
           if (user.app_metadata?.provider === 'google') {
-            console.log('Creating/updating profile for Google OAuth user with role:', finalRole)
-            await createUserProfile(user, finalRole)
-            setProfileCreated(true)
+            try {
+              // Check if user already exists in users table
+              const { data: existingUser, error: checkError } = await supabase
+                .from('users')
+                .select('role')
+                .eq('email', user.email?.toLowerCase())
+                .single()
+              
+              if (checkError && checkError.code !== 'PGRST116') {
+                console.error('Error checking existing user:', checkError)
+              }
+              
+              if (existingUser && existingUser.role !== roleFromUrl) {
+                // User exists with different role
+                toast({
+                  title: 'Registration Error',
+                  description: `This email is already registered as a ${existingUser.role.replace('_', ' ')}. Please log in or use a different email.`,
+                  variant: 'destructive'
+                })
+                await supabase.auth.signOut()
+                navigate('/auth/login', { replace: true })
+                return
+              }
+              
+              // If user doesn't exist or role matches, proceed
+              console.log('Google OAuth user role check passed')
+              setProfileCreated(true)
+              
+            } catch (error) {
+              console.error('Error during Google OAuth role check:', error)
+              toast({
+                title: 'Authentication Error',
+                description: 'There was an issue completing your sign in. Please try again.',
+                variant: 'destructive'
+              })
+              navigate('/auth/login', { replace: true })
+              return
+            }
           }
           
+          const finalRole = userRole || roleFromUrl
           let dashboardPath = '/customer/dashboard'
           
           if (finalRole === 'shop_owner') {
@@ -39,7 +74,7 @@ const AuthCallback = () => {
           
           toast({
             title: 'Welcome!',
-            description: 'You have successfully signed in with Google.',
+            description: 'You have successfully signed in.',
           })
           
           console.log('Redirecting to:', dashboardPath, 'for role:', finalRole)
