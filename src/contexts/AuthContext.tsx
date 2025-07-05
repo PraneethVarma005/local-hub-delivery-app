@@ -41,31 +41,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session)
         setUser(session?.user ?? null)
-        
-        // Handle Google OAuth user - check URL params for role
-        if (event === 'SIGNED_IN' && session?.user) {
-          const urlParams = new URLSearchParams(window.location.search)
-          const roleParam = urlParams.get('role')
-          
-          if (roleParam && session.user.app_metadata.provider === 'google') {
-            console.log('Google OAuth user detected with role:', roleParam)
-            
-            try {
-              const { error } = await supabase.auth.updateUser({
-                data: { role: roleParam }
-              })
-              
-              if (error) {
-                console.error('Error updating user role:', error)
-              } else {
-                console.log('User role updated successfully to:', roleParam)
-              }
-            } catch (error) {
-              console.error('Exception updating user role:', error)
-            }
-          }
-        }
-        
         setLoading(false)
       }
     )
@@ -152,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Google SignIn attempt with role:', role)
       
-      const redirectUrl = `${window.location.origin}/auth/callback?role=${role}`
+      const redirectUrl = `${window.location.origin}/auth/callback?role=${encodeURIComponent(role)}`
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -194,16 +169,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getUserRole = () => {
     if (!user) return 'customer'
     
-    // Check user_metadata first (for Google OAuth users)
+    // Check user_metadata first (for regular signups and updated roles)
     if (user.user_metadata?.role) {
       return user.user_metadata.role
     }
     
-    // Check app_metadata as fallback
+    // Check app_metadata as fallback (for OAuth providers like Google)
     if (user.app_metadata?.role) {
       return user.app_metadata.role
     }
     
+    // Default to customer
     return 'customer'
   }
 

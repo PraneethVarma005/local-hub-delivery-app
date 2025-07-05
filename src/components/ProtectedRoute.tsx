@@ -36,17 +36,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return <Navigate to="/auth/login" replace state={{ from: location }} />
   }
 
+  // Strict role checking - user can only access their designated role
   if (!allowedRoles.includes(userRole)) {
     console.log('ProtectedRoute: Role not allowed. User role:', userRole, 'Allowed:', allowedRoles)
     
-    // Redirect to correct dashboard based on user's actual role
+    // Redirect to the user's correct dashboard based on their actual role
     const dashboardPath = {
       'customer': '/customer/dashboard',
       'shop_owner': '/shop/dashboard', 
       'delivery_partner': '/delivery/dashboard'
     }[userRole] || '/customer/dashboard'
     
-    console.log('Redirecting to:', dashboardPath)
+    console.log('Redirecting to user\'s role dashboard:', dashboardPath)
     return <Navigate to={dashboardPath} replace />
   }
 

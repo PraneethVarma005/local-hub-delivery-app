@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Send, Bot, User } from 'lucide-react'
+import { Send, Bot, User, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -48,20 +48,21 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
     }
 
     setMessages(prev => [...prev, userMessage])
+    const messageContent = input.trim()
     setInput('')
     setLoading(true)
 
     try {
-      console.log('Sending message to AI chat function...')
+      console.log('Sending message to AI chat function:', messageContent)
       
       const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: { message: input.trim() },
+        body: { message: messageContent },
         headers: {
           'Content-Type': 'application/json',
         }
       })
 
-      console.log('AI chat response:', { data, error })
+      console.log('AI chat response received:', { data, error })
 
       if (error) {
         console.error('AI chat error:', error)
@@ -69,6 +70,7 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
       }
 
       if (!data?.response) {
+        console.error('Invalid response format:', data)
         throw new Error('Invalid response from AI service')
       }
 
@@ -87,20 +89,30 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'AI service is currently unavailable. Please try again later.',
+        content: 'I apologize, but I\'m having trouble processing your request right now. Please try again in a moment.',
         timestamp: new Date()
       }
       
       setMessages(prev => [...prev, errorMessage])
       
       toast({
-        title: 'Service Unavailable',
-        description: 'AI service is currently unavailable. Please try again later.',
+        title: 'AI Assistant Error',
+        description: 'The AI service is temporarily unavailable. Please try again.',
         variant: 'destructive'
       })
     } finally {
       setLoading(false)
     }
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="w-12 h-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-semibold text-gray-700 mb-2">Sign In Required</h3>
+        <p className="text-gray-500">Please sign in to use the AI assistant.</p>
+      </div>
+    )
   }
 
   const containerClasses = isFloating 
@@ -124,7 +136,8 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
         {messages.length === 0 && (
           <div className="text-center text-gray-500 py-8">
             <Bot className="w-12 h-12 mx-auto mb-4 text-[#16A085]" />
-            <p>Start a conversation with our AI assistant!</p>
+            <p>Hello! I'm your LocalHub AI assistant.</p>
+            <p className="text-sm mt-2">Ask me about orders, deliveries, shops, or anything else!</p>
           </div>
         )}
 
@@ -148,7 +161,7 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
                   : 'bg-white dark:bg-gray-700 border shadow-sm'
               }`}
             >
-              <p className="text-sm">{message.content}</p>
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               <span className="text-xs opacity-70 mt-1 block">
                 {message.timestamp.toLocaleTimeString([], { 
                   hour: '2-digit', 
@@ -187,13 +200,13 @@ const AIChat: React.FC<AIChatProps> = ({ isFloating = false }) => {
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask me anything..."
-          disabled={loading || !user}
+          placeholder="Ask me anything about LocalHub..."
+          disabled={loading}
           className="flex-1"
         />
         <Button 
           type="submit" 
-          disabled={loading || !input.trim() || !user}
+          disabled={loading || !input.trim()}
           className="bg-[#16A085] hover:bg-[#16A085]/90"
         >
           <Send className="w-4 h-4" />
