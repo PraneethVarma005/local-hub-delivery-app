@@ -45,35 +45,37 @@ serve(async (req) => {
 
     console.log('User authenticated:', user.id);
 
-    // Parse request body with proper error handling
+    // Step 1: Read raw body safely
     const bodyText = await req.text();
-    let requestBody;
+
+    // Step 2: Try parsing the body
+    let body;
     try {
-      requestBody = JSON.parse(bodyText);
+      body = JSON.parse(bodyText);
     } catch (e) {
       console.error('Invalid JSON body:', e);
-      return new Response(JSON.stringify({ 
-        error: 'Invalid JSON body' 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
-    console.log('Request body:', requestBody);
-    
-    // Check for message field
-    if (!requestBody || !requestBody.message) {
+    // Step 3: Ensure message exists
+    if (!body?.message) {
       console.error('Missing message field');
-      return new Response(JSON.stringify({ 
-        error: 'Missing message field' 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing 'message' in request body" }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
-    const { message } = requestBody;
+    const { message } = body;
 
     if (typeof message !== 'string' || message.trim().length === 0) {
       throw new Error('No valid message provided');
@@ -91,46 +93,46 @@ serve(async (req) => {
 
     console.log('Processing message from user:', user.id, 'Message length:', message.length);
 
-    // Call OpenRouter API with enhanced error handling
+    // Step 4: Use OpenRouter API
     let aiResponse;
     try {
       console.log('Making OpenRouter API call');
       
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
+      const chatResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${openRouterApiKey}`,
-          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${openRouterApiKey}`,
+          "Content-Type": "application/json",
           'HTTP-Referer': 'https://lovable.dev',
           'X-Title': 'LocalHub AI Assistant'
         },
         body: JSON.stringify({
-          model: 'mistralai/mistral-7b-instruct',
+          model: "mistralai/mistral-7b-instruct",
           messages: [
             { 
-              role: 'system', 
-              content: 'You are LocalHub\'s helpful assistant. You help users with questions about orders, deliveries, shops, and general app usage. Keep responses concise, friendly, and helpful. If users ask about technical issues, provide clear step-by-step guidance.' 
+              role: "system", 
+              content: "You are LocalHub's helpful assistant. You help users with questions about orders, deliveries, shops, and general app usage. Keep responses concise, friendly, and helpful. If users ask about technical issues, provide clear step-by-step guidance." 
             },
-            { role: 'user', content: message.trim() }
+            { role: "user", content: message.trim() }
           ],
           max_tokens: 500,
           temperature: 0.7,
-        }),
+        })
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OpenRouter API error:', response.status, errorText);
-        throw new Error(`OpenRouter API error: ${response.status}`);
+      if (!chatResponse.ok) {
+        const errorText = await chatResponse.text();
+        console.error('OpenRouter API error:', chatResponse.status, errorText);
+        throw new Error(`OpenRouter API error: ${chatResponse.status}`);
       }
 
-      const data = await response.json();
-      console.log('OpenRouter response received, choices:', data.choices?.length || 0);
+      const chatData = await chatResponse.json();
+      console.log('OpenRouter response received, choices:', chatData.choices?.length || 0);
       
-      aiResponse = data.choices?.[0]?.message?.content;
+      aiResponse = chatData.choices?.[0]?.message?.content;
 
       if (!aiResponse || typeof aiResponse !== 'string') {
-        console.error('Invalid AI response format:', data);
+        console.error('Invalid AI response format:', chatData);
         throw new Error('Invalid response from OpenRouter');
       }
 
@@ -162,9 +164,14 @@ serve(async (req) => {
       console.error('Exception saving chat log:', logError);
     }
 
-    return new Response(JSON.stringify({ response: aiResponse }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // Step 5: Return reply to frontend (using 'response' key to match frontend expectations)
+    return new Response(
+      JSON.stringify({ response: aiResponse }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
 
   } catch (error) {
     console.error('Error in ai-chat function:', error);
