@@ -11,7 +11,7 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const openRouterApiKey = Deno.env.get('OpenRouter\'s_mistralai/mistral-7b-instruct_MODEL');
 
 serve(async (req) => {
   console.log('AI Chat function called, method:', req.method);
@@ -54,8 +54,8 @@ serve(async (req) => {
       throw new Error('No valid message provided');
     }
 
-    if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
+    if (!openRouterApiKey) {
+      console.error('OpenRouter API key not configured');
       return new Response(JSON.stringify({ 
         response: 'Sorry, I\'m unavailable at the moment. The AI service is not configured. Please contact support.' 
       }), {
@@ -66,19 +66,21 @@ serve(async (req) => {
 
     console.log('Processing message from user:', user.id, 'Message length:', message.length);
 
-    // Call OpenAI API with enhanced error handling
+    // Call OpenRouter API with enhanced error handling
     let aiResponse;
     try {
-      console.log('Making OpenAI API call');
+      console.log('Making OpenRouter API call');
       
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
+          'Authorization': `Bearer ${openRouterApiKey}`,
           'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://lovable.dev',
+          'X-Title': 'LocalHub AI Assistant'
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'mistralai/mistral-7b-instruct',
           messages: [
             { 
               role: 'system', 
@@ -93,22 +95,22 @@ serve(async (req) => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OpenAI API error:', response.status, errorText);
-        throw new Error(`OpenAI API error: ${response.status}`);
+        console.error('OpenRouter API error:', response.status, errorText);
+        throw new Error(`OpenRouter API error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('OpenAI response received, choices:', data.choices?.length || 0);
+      console.log('OpenRouter response received, choices:', data.choices?.length || 0);
       
       aiResponse = data.choices?.[0]?.message?.content;
 
       if (!aiResponse || typeof aiResponse !== 'string') {
         console.error('Invalid AI response format:', data);
-        throw new Error('Invalid response from OpenAI');
+        throw new Error('Invalid response from OpenRouter');
       }
 
-    } catch (openAIError) {
-      console.error('OpenAI API call failed:', openAIError);
+    } catch (apiError) {
+      console.error('OpenRouter API call failed:', apiError);
       
       // Return a friendly fallback message
       aiResponse = 'Sorry, I\'m unavailable at the moment. Please try again in a few minutes, or contact support if the issue persists.';
