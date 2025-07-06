@@ -10,21 +10,25 @@ const AuthCallback = () => {
   const [searchParams] = useSearchParams()
   const { user, userRole, loading } = useAuth()
   const { toast } = useToast()
-  const [profileCreated, setProfileCreated] = useState(false)
+  const [processingAuth, setProcessingAuth] = useState(false)
 
   useEffect(() => {
     const handleAuthCallback = async () => {
-      if (!loading && user && !profileCreated) {
+      if (loading || processingAuth) return
+      
+      if (user && !processingAuth) {
+        setProcessingAuth(true)
+        
         try {
           console.log('OAuth user authenticated:', user.email)
           
           // Get role from URL params (for Google OAuth)
           const roleFromUrl = searchParams.get('role') || 'customer'
           
-          // For Google OAuth users, check if they already have a role
+          // For Google OAuth users, check role conflicts
           if (user.app_metadata?.provider === 'google') {
             try {
-              // Check if user already exists in users table
+              // Check if user already exists in users table with different role
               const { data: existingUser, error: checkError } = await supabase
                 .from('users')
                 .select('role')
@@ -33,13 +37,15 @@ const AuthCallback = () => {
               
               if (checkError && checkError.code !== 'PGRST116') {
                 console.error('Error checking existing user:', checkError)
+                throw new Error('Database error while checking user')
               }
               
               if (existingUser && existingUser.role !== roleFromUrl) {
-                // User exists with different role
+                // User exists with different role - this should not happen with proper DB constraints
+                const roleDisplayName = existingUser.role.replace('_', ' ')
                 toast({
                   title: 'Registration Error',
-                  description: `This email is already registered as a ${existingUser.role.replace('_', ' ')}. Please log in or use a different email.`,
+                  description: `This email is already registered as a ${roleDisplayName}. Please log in with that role or use a different email.`,
                   variant: 'destructive'
                 })
                 await supabase.auth.signOut()
@@ -47,9 +53,8 @@ const AuthCallback = () => {
                 return
               }
               
-              // If user doesn't exist or role matches, proceed
+              // If user doesn't exist, the trigger will handle creation
               console.log('Google OAuth user role check passed')
-              setProfileCreated(true)
               
             } catch (error) {
               console.error('Error during Google OAuth role check:', error)
@@ -58,12 +63,35 @@ const AuthCallback = () => {
                 description: 'There was an issue completing your sign in. Please try again.',
                 variant: 'destructive'
               })
+              await supabase.auth.signOut()
               navigate('/auth/login', { replace: true })
               return
             }
           }
           
-          const finalRole = userRole || roleFromUrl
+          // Wait a moment for the database trigger to complete
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Fetch the user's actual role from the database
+          const { data: userData, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+          
+          if (roleError) {
+            console.error('Error fetching user role after auth:', roleError)
+            toast({
+              title: 'Authentication Error',
+              description: 'Could not determine your role. Please try logging in again.',
+              variant: 'destructive'
+            })
+            await supabase.auth.signOut()
+            navigate('/auth/login', { replace: true })
+            return
+          }
+          
+          const finalRole = userData.role
           let dashboardPath = '/customer/dashboard'
           
           if (finalRole === 'shop_owner') {
@@ -87,7 +115,10 @@ const AuthCallback = () => {
             description: 'There was an issue completing your sign in. Please try again.',
             variant: 'destructive'
           })
+          await supabase.auth.signOut()
           navigate('/auth/login', { replace: true })
+        } finally {
+          setProcessingAuth(false)
         }
       } else if (!loading && !user) {
         console.log('No user found after OAuth, redirecting to login')
@@ -96,7 +127,7 @@ const AuthCallback = () => {
     }
 
     handleAuthCallback()
-  }, [user, userRole, loading, navigate, toast, searchParams, profileCreated])
+  }, [user, userRole, loading, navigate, toast, searchParams, processingAuth])
 
   return (
     <div className="min-h-screen bg-[#F7F9F9] flex items-center justify-center">

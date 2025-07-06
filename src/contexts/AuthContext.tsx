@@ -143,14 +143,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
-      console.log('SignUp attempt for:', email)
+      console.log('SignUp attempt for:', email, 'with role:', userData.role)
       
-      // Check if user already exists
+      // Check if user already exists with any role
       const existingUser = await checkExistingUser(email)
       if (existingUser) {
+        const roleDisplayName = existingUser.role.replace('_', ' ')
         return { 
           error: { 
-            message: `This email is already registered as a ${existingUser.role.replace('_', ' ')}. Please log in or use a different email.` 
+            message: `This email is already registered as a ${roleDisplayName}. Please log in or use a different email.` 
           } 
         }
       }
@@ -162,7 +163,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         options: {
           emailRedirectTo: redirectUrl,
-          data: userData
+          data: {
+            ...userData,
+            email: email.toLowerCase() // Ensure email is lowercase
+          }
         }
       })
 
