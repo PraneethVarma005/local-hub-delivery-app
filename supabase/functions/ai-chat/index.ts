@@ -11,7 +11,7 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const openRouterApiKey = Deno.env.get('OpenRouter\'s_mistralai/mistral-7b-instruct_MODEL');
+const openRouterApiKey = Deno.env.get('OR_API_KEY');
 
 serve(async (req) => {
   console.log('AI Chat function called, method:', req.method);
@@ -45,12 +45,37 @@ serve(async (req) => {
 
     console.log('User authenticated:', user.id);
 
-    const requestBody = await req.json();
+    // Parse request body with proper error handling
+    const bodyText = await req.text();
+    let requestBody;
+    try {
+      requestBody = JSON.parse(bodyText);
+    } catch (e) {
+      console.error('Invalid JSON body:', e);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON body' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('Request body:', requestBody);
     
+    // Check for message field
+    if (!requestBody || !requestBody.message) {
+      console.error('Missing message field');
+      return new Response(JSON.stringify({ 
+        error: 'Missing message field' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { message } = requestBody;
 
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    if (typeof message !== 'string' || message.trim().length === 0) {
       throw new Error('No valid message provided');
     }
 
@@ -84,7 +109,7 @@ serve(async (req) => {
           messages: [
             { 
               role: 'system', 
-              content: 'You are a helpful assistant for LocalHub, a local delivery service app. You help users with questions about orders, deliveries, shops, and general app usage. Keep responses concise, friendly, and helpful. If users ask about technical issues, provide clear step-by-step guidance.' 
+              content: 'You are LocalHub\'s helpful assistant. You help users with questions about orders, deliveries, shops, and general app usage. Keep responses concise, friendly, and helpful. If users ask about technical issues, provide clear step-by-step guidance.' 
             },
             { role: 'user', content: message.trim() }
           ],
